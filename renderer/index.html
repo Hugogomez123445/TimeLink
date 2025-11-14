@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Gestión de Citas</title>
+
+  <style>
+    :root {
+      --color-principal: #2563eb;
+      --color-fondo: #f9fafb;
+      --color-texto: #1f2937;
+      --color-borde: #e5e7eb;
+      --color-tarjeta: #ffffff;
+      --sombra: 0 6px 18px rgba(0, 0, 0, 0.08);
+    }
+
+    /* Tema oscuro */
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --color-principal: #3b82f6;
+        --color-fondo: #020617;
+        --color-texto: #e5e7eb;
+        --color-borde: #374151;
+        --color-tarjeta: #020617;
+        --sombra: 0 10px 30px rgba(0, 0, 0, 0.7);
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: "Inter", "Segoe UI", sans-serif;
+    }
+
+    body {
+      background: radial-gradient(circle at top, rgba(37, 99, 235, 0.18), transparent 55%), var(--color-fondo);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .container {
+      background: var(--color-tarjeta);
+      width: 360px;
+      padding: 40px 30px;
+      border-radius: 16px;
+      box-shadow: var(--sombra);
+      text-align: center;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+
+    h1 {
+      color: var(--color-texto);
+      margin-bottom: 25px;
+      font-weight: 600;
+    }
+
+    .input-group {
+      position: relative;
+      margin-bottom: 22px;
+    }
+
+    .input-group input {
+      width: 100%;
+      padding: 16px 45px 8px 14px;
+      border: 1px solid var(--color-borde);
+      border-radius: 10px;
+      font-size: 15px;
+      background: #f9fafb;
+      color: var(--color-texto);
+      transition: 0.2s ease;
+    }
+
+    .input-group input:focus {
+      outline: none;
+      border-color: var(--color-principal);
+      background: #ffffff;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+    }
+
+    .input-group input::placeholder {
+      color: #9ca3af;
+    }
+
+    .icon {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      cursor: pointer;
+      font-size: 20px;
+      color: #6b7280;
+      z-index: 10;
+      pointer-events: all;
+    }
+
+    #actionBtn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 999px;
+      font-size: 15px;
+      font-weight: 600;
+      color: white;
+      background: var(--color-principal);
+      cursor: pointer;
+      margin-top: 5px;
+      transition: 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    #actionBtn:hover {
+      background: #1d4ed8;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 14px rgba(37, 99, 235, 0.3);
+    }
+
+    #actionBtn:disabled {
+      opacity: 0.7;
+      cursor: default;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .toggle {
+      margin-top: 18px;
+      color: var(--color-principal);
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .toggle:hover {
+      text-decoration: underline;
+    }
+
+    /* Mensaje de error contraseña */
+    #passwordError {
+      display: none;
+      color: #dc2626;
+      font-size: 13px;
+      margin-top: -10px;
+      text-align: left;
+      transition: 0.2s;
+    }
+
+    /* Barra de color de fuerza de contraseña */
+    #passwordStrength {
+      width: 100%;
+      height: 6px;
+      background: #e5e7eb;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 4px;
+      display: none;
+    }
+
+    #strengthBar {
+      height: 100%;
+      width: 0%;
+      background: red;
+      transition: width 0.4s ease, background 0.4s ease;
+    }
+
+    /* Loader circular */
+    #loader {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.4);
+      border-top-color: #ffffff;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @keyframes shake {
+  0% { transform: translateX(0); }
+  15% { transform: translateX(-14px); }
+  30% { transform: translateX(14px); }
+  45% { transform: translateX(-12px); }
+  60% { transform: translateX(12px); }
+  75% { transform: translateX(-8px); }
+  90% { transform: translateX(8px); }
+  100% { transform: translateX(0); }
+}
+
+.shake {
+  animation: shake 0.45s cubic-bezier(.36,.07,.19,.97);
+}
+
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1 id="title">Iniciar Sesión</h1>
+
+    <!-- EMAIL -->
+    <div class="input-group" id="email-group" style="display:none;">
+      <input type="email" id="email" placeholder="Correo electrónico" />
+    </div>
+
+    <!-- USUARIO -->
+    <div class="input-group">
+      <input type="text" id="username" placeholder="Usuario" />
+    </div>
+
+    <!-- CONTRASEÑA -->
+    <div class="input-group">
+      <input type="password" id="password" placeholder="Contraseña" />
+      <span class="icon" id="togglePassword">👁️</span>
+    </div>
+
+    <!-- error contraseña -->
+    <p id="passwordError"></p>
+
+    <!-- Barra color de fuerza -->
+    <div id="passwordStrength">
+      <div id="strengthBar"></div>
+    </div>
+
+    <!-- Botón + loader -->
+    <button id="actionBtn">
+      <span id="btnText">Entrar</span>
+      <div id="loader"></div>
+    </button>
+
+    <div class="toggle" id="toggleText">¿No tienes cuenta? Regístrate</div>
+  </div>
+
+  <script src="./renderer.js"></script>
+</body>
+
+</html>
