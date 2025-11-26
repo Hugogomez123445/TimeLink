@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <title>TimeLink - Panel</title>
+
+  <!-- FullCalendar -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+
+  <!-- CSS separado -->
+  <link rel="stylesheet" href="../main/mainApp.css">
+</head>
+
+<body>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div>
+      <div class="user-info">
+        <h2 id="userName">Usuario</h2>
+        <p id="userEmail">correo@example.com</p>
+      </div>
+
+      <div class="menu">
+        <button onclick="navigate('inicio')" id="btnInicio" class="active">🏠 Inicio</button>
+        <button onclick="navigate('calendario')" id="btnCalendario">📅 Calendario</button>
+        <button onclick="navigate('clientes')" id="btnClientes">👤 Clientes</button>
+        <button onclick="navigate('citas')" id="btnCitas">📝 Citas</button>
+        <button onclick="navigate('ajustes')" id="btnAjustes">⚙️ Ajustes</button>
+        <button onclick="navigate('adminPanel')" id="adminPanelBtn" style="display:none;">
+          ⭐ Panel Admin
+        </button>
+        <!-- 🟦 SUBMENÚ ADMINISTRACIÓN AVANZADA (solo admin) -->
+        <div id="submenuAdminContainer" style="display:none; margin-top:10px;">
+
+          <!-- Botón principal -->
+          <button class="menu-btn admin-toggle" id="adminToggleBtn">
+            ⚙️ Administración avanzada ▾
+          </button>
+
+          <!-- Submenú -->
+          <div id="adminSubmenu" class="submenu-admin">
+
+            <button class="submenu-item" id="btnEmpresas" onclick="navigate('empresas')">
+              🏢 Empresas
+            </button>
+
+            <button class="submenu-item" id="btnTrabajadores" onclick="navigate('trabajadores')">
+              👥 Trabajadores
+            </button>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="menu">
+      <button onclick="logout()">🚪 Cerrar Sesión</button>
+    </div>
+  </aside>
+
+  <!-- CONTENIDO -->
+  <div class="main" id="mainContent">
+    <h1>Bienvenido 👋</h1>
+    <p>Aquí irá el contenido dinámico.</p>
+  </div>
+
+  <!-- POPUP CITAS -->
+  <div id="popupCita">
+    <div class="popup-card">
+      <h2 id="popupTitulo">Nueva cita</h2>
+
+      <label>Cliente:</label>
+      <input id="citaCliente" type="text" placeholder="Nombre del cliente">
+
+      <label>Teléfono:</label>
+      <input id="citaTelefono" type="text" placeholder="Teléfono">
+
+      <label>Nota:</label>
+      <textarea id="citaNota" placeholder="Notas"></textarea>
+
+      <div class="popup-actions">
+        <button id="cancelarPopup">Cancelar</button>
+        <button id="guardarPopup">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JS separado -->
+  <script defer src="../main/renderer1.js"></script>
+
+</body>
+
+</html>

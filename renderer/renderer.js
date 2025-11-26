@@ -2,6 +2,7 @@ console.log("renderer cargado");
 console.log("window.api =", window.api);
 
 let isLogin = true;
+let isAdminMode = false;
 
 const title = document.getElementById("title");
 const actionBtn = document.getElementById("actionBtn");
@@ -15,7 +16,7 @@ const passwordError = document.getElementById("passwordError");
 const strengthContainer = document.getElementById("passwordStrength");
 const strengthBar = document.getElementById("strengthBar");
 
-// Helper para loader
+// Helper loader
 function setLoading(loading) {
   if (loading) {
     actionBtn.disabled = true;
@@ -28,8 +29,10 @@ function setLoading(loading) {
   }
 }
 
-// transicion entre login y registro
+// Cambiar entre login y registro
 toggleText.addEventListener("click", () => {
+  if (isAdminMode) return; // El admin no puede registrarse
+
   const container = document.querySelector(".container");
   container.style.opacity = "0.5";
 
@@ -55,32 +58,58 @@ toggleText.addEventListener("click", () => {
   }, 150);
 });
 
-// Accion login / registro
+// Acción: login / registro
 actionBtn.addEventListener("click", async () => {
   const username = document.getElementById("username").value.trim();
   const password = passwordInput.value.trim();
+  const email = emailInput.value.trim();
 
   if (!username || !password) {
     alert("Por favor, completa todos los campos.");
     return;
   }
 
+  // --- LOGIN ADMIN NORMAL (Inicia sesión pero con rol admin)
+  if (isAdminMode) {
+    const result = await window.api.loginUser({ username, password });
+
+    if (!result.success) {
+      alert("Credenciales de administrador incorrectas.");
+      return;
+    }
+
+    if (result.user.role !== "admin") {
+      alert("Este usuario no es administrador.");
+      return;
+    }
+
+    // Guardar info admin
+    localStorage.setItem("userId", result.user.id);
+    localStorage.setItem("username", result.user.username);
+    localStorage.setItem("email", result.user.email); 
+    localStorage.setItem("role", result.user.role);
+
+    window.location.href = "./main/mainApp.html";
+    return;
+  }
+
+  // ========== LOGIN CLIENTE ==========
   if (isLogin) {
-    // LOGIN
     try {
       setLoading(true);
       const result = await window.api.loginUser({ username, password });
 
       if (result.success) {
+        localStorage.setItem("userId", result.user.id);
         localStorage.setItem("username", result.user.username);
         localStorage.setItem("email", result.user.email);
-        window.location.href = "mainApp.html";
+        localStorage.setItem("role", result.user.role);
+
+        window.location.href = "./main/mainApp.html";
       } else {
-        // ⚠️ SHAKE EN LOGIN FALLIDO
         const card = document.querySelector(".container");
         card.classList.add("shake");
         setTimeout(() => card.classList.remove("shake"), 400);
-
         alert(result.message);
       }
     } catch (err) {
@@ -89,66 +118,64 @@ actionBtn.addEventListener("click", async () => {
     } finally {
       setLoading(false);
     }
-  } else {
-    // REGISTRO
-    const email = emailInput.value.trim();
+  }
+
+  // ========== REGISTRO CLIENTE ==========
+  else {
     if (!email) {
       alert("Introduce tu correo electrónico.");
       return;
     }
 
-    // VALIDACIÓN DE CONTRASEÑA
+    // Validación contraseña
     let errors = [];
-
     if (password.length < 8) errors.push("• Mínimo 8 caracteres.");
-    if (!/[0-9]/.test(password)) errors.push("• Debe contener al menos un número.");
+    if (!/[0-9]/.test(password)) errors.push("• Debe contener un número.");
     if (!/[!@#$%^&*(),.?\":{}|<>_\-]/.test(password)) errors.push("• Debe contener un símbolo especial.");
 
     if (errors.length > 0) {
       passwordError.innerHTML = errors.join("<br>");
       passwordError.style.display = "block";
-
-      passwordError.style.transform = "translateX(-3px)";
-      setTimeout(() => (passwordError.style.transform = "translateX(0)"), 150);
-
       return;
     }
 
     try {
       setLoading(true);
-      const result = await window.api.registerUser({ username, email, password });
+      const result = await window.api.registerUser({
+        username,
+        email,
+        password,
+        role: "cliente"
+      });
 
       if (result.success) {
         alert("Usuario registrado correctamente.");
+        isLogin = true;
         title.textContent = "Iniciar Sesión";
         btnText.textContent = "Entrar";
         toggleText.textContent = "¿No tienes cuenta? Regístrate";
         emailGroup.style.display = "none";
-        strengthContainer.style.display = "none";
-        passwordError.style.display = "none";
-        isLogin = true;
       } else {
         alert(result.message);
       }
     } catch (err) {
       console.error(err);
-      alert("Error al registrar el usuario.");
+      alert("Error al registrar usuario.");
     } finally {
       setLoading(false);
     }
   }
 });
 
-// Validación en tiempo real + barra de colores de fuerza
+// Fuerza de contraseña
 passwordInput.addEventListener("input", () => {
-  if (isLogin) {
+  if (isLogin || isAdminMode) {
     passwordError.style.display = "none";
     strengthContainer.style.display = "none";
     return;
   }
 
   const val = passwordInput.value;
-  let errors = [];
   let strength = 0;
 
   if (val.length >= 8) strength++;
@@ -162,27 +189,58 @@ passwordInput.addEventListener("input", () => {
     strengthContainer.style.display = "none";
   }
 
-  if (val.length < 8) errors.push("• Mínimo 8 caracteres.");
-  if (!/[0-9]/.test(val)) errors.push("• Debe contener al menos un número.");
-  if (!/[!@#$%^&*(),.?\":{}|<>_\-]/.test(val)) errors.push("• Debe contener un símbolo especial.");
-
-  if (errors.length > 0) {
-    passwordError.innerHTML = errors.join("<br>");
-    passwordError.style.display = "block";
-  } else {
-    passwordError.style.display = "none";
-  }
-
   if (strength <= 1) {
     strengthBar.style.width = "33%";
     strengthBar.style.background = "#ef4444";
   } else if (strength === 2) {
     strengthBar.style.width = "66%";
     strengthBar.style.background = "#f59e0b";
-  } else if (strength >= 3) {
+  } else {
     strengthBar.style.width = "100%";
     strengthBar.style.background = "#22c55e";
   }
+});
+
+// --- POPUP ADMIN ---
+document.getElementById("adminAccess").addEventListener("click", () => {
+  document.getElementById("popupAdmin").style.display = "flex";
+});
+
+// Cerrar popup admin
+document.getElementById("cancelAdmin").onclick = () => {
+  document.getElementById("popupAdmin").style.display = "none";
+};
+
+// LOGIN ADMIN DESDE POPUP
+document.getElementById("loginAdminBtn").addEventListener("click", async () => {
+  const adminUser = document.getElementById("adminUser").value.trim();
+  const adminPass = document.getElementById("adminPass").value.trim();
+
+  if (!adminUser || !adminPass) {
+    alert("Completa todos los campos.");
+    return;
+  }
+
+  const result = await window.api.loginUser({ username: adminUser, password: adminPass });
+
+  if (!result.success) {
+    alert("Credenciales incorrectas.");
+    return;
+  }
+
+  if (result.user.role !== "admin") {
+    alert("Este usuario no es administrador.");
+    return;
+  }
+
+  // Guardar datos admin
+  localStorage.setItem("userId", result.user.id);
+  localStorage.setItem("username", result.user.username);
+  localStorage.setItem("email", result.user.email);
+localStorage.setItem("role", result.user.role);
+
+    window.location.href = "./main/mainApp.html";
+
 });
 
 // Mostrar / ocultar contraseña

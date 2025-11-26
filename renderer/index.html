@@ -15,7 +15,6 @@
       --sombra: 0 6px 18px rgba(0, 0, 0, 0.08);
     }
 
-    /* Tema oscuro */
     @media (prefers-color-scheme: dark) {
       :root {
         --color-principal: #3b82f6;
@@ -80,10 +79,6 @@
       box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
     }
 
-    .input-group input::placeholder {
-      color: #9ca3af;
-    }
-
     .icon {
       position: absolute;
       right: 14px;
@@ -92,8 +87,6 @@
       cursor: pointer;
       font-size: 20px;
       color: #6b7280;
-      z-index: 10;
-      pointer-events: all;
     }
 
     #actionBtn {
@@ -120,13 +113,6 @@
       box-shadow: 0 6px 14px rgba(37, 99, 235, 0.3);
     }
 
-    #actionBtn:disabled {
-      opacity: 0.7;
-      cursor: default;
-      transform: none;
-      box-shadow: none;
-    }
-
     .toggle {
       margin-top: 18px;
       color: var(--color-principal);
@@ -135,21 +121,14 @@
       font-weight: 500;
     }
 
-    .toggle:hover {
-      text-decoration: underline;
-    }
-
-    /* Mensaje de error contraseña */
     #passwordError {
       display: none;
       color: #dc2626;
       font-size: 13px;
       margin-top: -10px;
       text-align: left;
-      transition: 0.2s;
     }
 
-    /* Barra de color de fuerza de contraseña */
     #passwordStrength {
       width: 100%;
       height: 6px;
@@ -164,16 +143,14 @@
       height: 100%;
       width: 0%;
       background: red;
-      transition: width 0.4s ease, background 0.4s ease;
     }
 
-    /* Loader circular */
     #loader {
       width: 18px;
       height: 18px;
       border-radius: 50%;
       border: 2px solid rgba(255, 255, 255, 0.4);
-      border-top-color: #ffffff;
+      border-top-color: white;
       animation: spin 0.7s linear infinite;
       display: none;
     }
@@ -184,21 +161,54 @@
       }
     }
 
-    @keyframes shake {
-  0% { transform: translateX(0); }
-  15% { transform: translateX(-14px); }
-  30% { transform: translateX(14px); }
-  45% { transform: translateX(-12px); }
-  60% { transform: translateX(12px); }
-  75% { transform: translateX(-8px); }
-  90% { transform: translateX(8px); }
-  100% { transform: translateX(0); }
-}
+    /* POPUP ADMIN */
+    #popupAdmin {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
 
-.shake {
-  animation: shake 0.45s cubic-bezier(.36,.07,.19,.97);
-}
+    #popupAdmin .popup-card {
+      background: var(--color-tarjeta);
+      width: 300px;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: var(--sombra);
+      animation: fadeIn 0.25s ease;
+    }
 
+    #popupAdmin input {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 6px;
+      border: 1px solid var(--color-borde);
+      background: #f9fafb;
+    }
+
+    #popupAdmin button {
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+    }
+
+    #cancelAdmin {
+      background: #ddd;
+    }
+
+    #loginAdminBtn {
+      background: #2563eb;
+      color: white;
+    }
   </style>
 </head>
 
@@ -206,40 +216,51 @@
   <div class="container">
     <h1 id="title">Iniciar Sesión</h1>
 
-    <!-- EMAIL -->
     <div class="input-group" id="email-group" style="display:none;">
       <input type="email" id="email" placeholder="Correo electrónico" />
     </div>
 
-    <!-- USUARIO -->
     <div class="input-group">
       <input type="text" id="username" placeholder="Usuario" />
     </div>
 
-    <!-- CONTRASEÑA -->
     <div class="input-group">
       <input type="password" id="password" placeholder="Contraseña" />
       <span class="icon" id="togglePassword">👁️</span>
     </div>
 
-    <!-- error contraseña -->
     <p id="passwordError"></p>
 
-    <!-- Barra color de fuerza -->
     <div id="passwordStrength">
       <div id="strengthBar"></div>
     </div>
 
-    <!-- Botón + loader -->
     <button id="actionBtn">
       <span id="btnText">Entrar</span>
       <div id="loader"></div>
     </button>
 
     <div class="toggle" id="toggleText">¿No tienes cuenta? Regístrate</div>
+
+    <p id="adminAccess" style="margin-top:15px; color:#2563eb; cursor:pointer;">Entrar como administrador 🔐</p>
+  </div>
+
+  <!-- POPUP ADMIN -->
+  <div id="popupAdmin">
+    <div class="popup-card">
+      <h2 style="text-align:center;">Acceso Administrador</h2>
+
+      <input id="adminUser" type="text" placeholder="Usuario">
+      <input id="adminPass" type="password" placeholder="Contraseña">
+
+      <div style="display:flex; justify-content:right; gap:8px;">
+        <button id="cancelAdmin">Cancelar</button>
+        <button id="loginAdminBtn">Entrar</button>
+      </div>
+    </div>
   </div>
 
   <script src="./renderer.js"></script>
-</body>
 
+</body>
 </html>
