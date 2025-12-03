@@ -986,7 +986,7 @@ document.getElementById("borrarEmpresaPreview").onclick = async () => {
 
 
 // ========================================================
-// 👷 TRABAJADORES - variables globales
+// TRABAJADORES - variables globales
 // ========================================================
 let trabajadoresGlobal = [];
 let trabajadorIndex = null;
@@ -994,7 +994,7 @@ let trabajadorActual = null;
 let empresasGlobalList = [];   // empresas para el select
 
 // ========================================================
-// 👷 Renderizar pantalla de TRABAJADORES
+// Renderizar pantalla de TRABAJADORES
 // ========================================================
 async function renderTrabajadores(main) {
 
@@ -1043,7 +1043,7 @@ async function renderTrabajadores(main) {
 }
 
 // ========================================================
-// 👷 Pintar lista de trabajadores (CARD VIEW)
+// pintar lista de trabajadores (CARD VIEW)
 // ========================================================
 function pintarTrabajadores(lista) {
 
@@ -1068,7 +1068,7 @@ function pintarTrabajadores(lista) {
 
 
 // ========================================================
-// 👁️ Abrir popup de vista de trabajador
+// abrir popup de vista de trabajador
 // ========================================================
 function abrirTrabajador(index) {
 
@@ -1091,7 +1091,7 @@ function abrirTrabajador(index) {
 
 
 // ========================================================
-// ➕ Nuevo trabajador (abrir popup limpio)
+// Nuevo trabajador (abrir popup limpio)
 // ========================================================
 function nuevoTrabajador() {
     trabajadorIndex = null;
@@ -1103,8 +1103,8 @@ function nuevoTrabajador() {
     document.getElementById("popupTrabajador").style.display = "flex";
 }
 
-// ========================================================
-// 💾 Guardar trabajador (CREAR o EDITAR)
+// =======================================================
+// Guardar trabajador (CREAR o EDITAR)
 // ========================================================
 document.getElementById("guardarTrabajadorPopup").onclick = async () => {
 
@@ -1154,7 +1154,7 @@ document.getElementById("guardarTrabajadorPopup").onclick = async () => {
 
 
 // ========================================================
-// 📋 Rellenar select de empresas en popup trabajador
+// Rellenar select de empresas en popup trabajador
 // ========================================================
 function cargarEmpresasEnSelect() {
     const sel = document.getElementById("trEmpresaSelect");
@@ -1166,7 +1166,7 @@ function cargarEmpresasEnSelect() {
 }
 
 // ========================================================
-// ❌ Borrar trabajador desde el popup de vista
+// Borrar trabajador desde el popup de vista
 // ========================================================
 document.getElementById("borrarTrabajadorPreview").onclick = async () => {
 
