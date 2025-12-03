@@ -1183,7 +1183,7 @@ document.getElementById("borrarTrabajadorPreview").onclick = async () => {
 };
 
 // ========================================================
-// 🧽 LIMPIAR POPUP DE TRABAJADOR
+// LIMPIAR POPUP DE TRABAJADOR
 // ========================================================
 function limpiarPopupTrabajador() {
     document.getElementById("trNombre").value = "";
