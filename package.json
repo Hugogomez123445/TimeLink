@@ -13,9 +13,11 @@
   "type": "commonjs",
   "devDependencies": {
     "electron": "^39.1.2",
-    "electron-packager": "^17.1.2"
+    "electron-packager": "^17.1.2",
+    "electron-rebuild": "^3.2.9"
   },
   "dependencies": {
+    "express": "^5.1.0",
     "fullcalendar": "^6.1.19",
     "sqlite3": "^5.1.7"
   }

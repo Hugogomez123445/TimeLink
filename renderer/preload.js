@@ -14,5 +14,24 @@ contextBridge.exposeInMainWorld("api", {
   // ADMIN – USUARIOS
   getAllUsers: () => ipcRenderer.invoke("get-all-users"),
   updateUserRole: data => ipcRenderer.invoke("update-user-role", data),
-  deleteUser: id => ipcRenderer.invoke("delete-user", id)
+  deleteUser: id => ipcRenderer.invoke("delete-user", id),
+
+  // EMPRESAS
+  addEmpresa: data => ipcRenderer.invoke("add-empresa", data),
+  getEmpresas: () => ipcRenderer.invoke("get-empresas"),
+  updateEmpresa: data => ipcRenderer.invoke("update-empresa", data),
+  deleteEmpresa: id => ipcRenderer.invoke("delete-empresa", id),
+
+
+
+  // TRABAJADORES POR EMPRESA (FALTABA)
+  getTrabajadoresByEmpresa: id => ipcRenderer.invoke("get-trabajadores-by-empresa", id),
+  saveImage: data => ipcRenderer.invoke("save-image", data),
+
+  getTrabajadores: () => ipcRenderer.invoke("get-trabajadores"),
+  addTrabajador: (data) => ipcRenderer.invoke("add-trabajador", data),
+  updateTrabajador: (data) => ipcRenderer.invoke("update-trabajador", data),
+  deleteTrabajador: (id) => ipcRenderer.invoke("delete-trabajador", id),
+
+
 });

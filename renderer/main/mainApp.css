@@ -507,3 +507,882 @@ h1 {
     border-left-color: #1d4ed8;
     font-weight: 600;
 }
+
+/* Popup de Empresas */
+#popupEmpresa {
+  display: none;
+}
+
+#popupEmpresa .popup-card input {
+  margin-bottom: 10px;
+}
+
+
+/* =========================================================
+   POPUP EMPRESA — MISMO ESTILO QUE POPUP DE CITA
+   ========================================================= */
+
+#popupEmpresa {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.45);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+}
+
+#popupEmpresa .empresa-card-popup {
+  background: white;
+  padding: 28px;
+  width: 380px;
+  border-radius: 16px;
+  box-shadow: var(--shadow-large);
+  animation: fadeIn 0.25s ease;
+}
+
+#popupEmpresa h2 {
+  margin-bottom: 15px;
+  color: var(--color-texto);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+#popupEmpresa label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 4px;
+  display: block;
+}
+
+#popupEmpresa input {
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  font-size: 15px;
+  margin-bottom: 14px;
+  background: #f9fafb;
+  transition: 0.2s ease;
+}
+
+#popupEmpresa input:focus {
+  border-color: var(--color-principal);
+  background: white;
+}
+
+#popupEmpresa .popup-actions {
+  text-align: right;
+}
+
+#cancelarEmpresaPopup,
+#guardarEmpresaPopup {
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+#cancelarEmpresaPopup {
+  background: #e5e7eb;
+}
+
+#guardarEmpresaPopup {
+  background: var(--color-principal);
+  color: white;
+}
+
+/* ----------------------------
+   ESTILO DE LA SECCIÓN EMPRESAS
+----------------------------- */
+
+.title-page {
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 25px;
+}
+
+.empresa-actions {
+  margin-bottom: 25px;
+}
+
+.add-empresa-btn {
+  padding: 10px 18px;
+  font-size: 15px;
+  border-radius: 10px;
+  background: var(--color-principal);
+  color: white;
+  border: none;
+  cursor: pointer;
+  box-shadow: var(--shadow-small);
+  transition: 0.2s ease;
+}
+
+.add-empresa-btn:hover {
+  background: #1d4ed8;
+  transform: translateY(-2px);
+}
+
+.empresa-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 22px;
+  margin-top: 20px;
+}
+
+.empty-text {
+  font-size: 16px;
+  color: #6b7280;
+}
+
+.empresa-card-view {
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+  transition: 0.25s ease;
+}
+
+.empresa-card-view:hover {
+  transform: translateY(-4px);
+}
+
+.empresa-img {
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+  background: #e5e7eb;
+}
+
+.empresa-info {
+  padding: 16px;
+}
+
+.empresa-info h3 {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.empresa-info p {
+  margin: 4px 0;
+  font-size: 15px;
+}
+
+/* ============================
+   POPUP VER EMPRESA ESTILADO
+   ============================ */
+
+#popupEmpresaView {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,.55);
+  backdrop-filter: blur(4px);
+  z-index: 3000;
+}
+
+.empresa-view-card {
+  background: white;
+  width: 420px;
+  padding: 25px;
+  border-radius: 18px;
+  box-shadow: 0 10px 25px rgba(0,0,0,.25);
+  animation: fadeIn .25s ease-out;
+  position: relative;
+  text-align: center;
+}
+
+.empresa-view-card h2 {
+  font-size: 22px;
+  margin: 10px 0;
+  font-weight: 700;
+}
+
+.empresa-view-card p {
+  font-size: 15px;
+  color: #444;
+  margin: 4px 0;
+}
+
+.empresa-view-img {
+  width: 100%;
+  height: 220px;
+  object-fit: cover;
+  border-radius: 14px;
+}
+
+.close-btn {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  font-size: 22px;
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+.view-navigation {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 18px;
+}
+
+.view-navigation button {
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: #e5e7eb;
+  border: none;
+  cursor: pointer;
+  transition: .2s;
+}
+
+.view-navigation button:hover {
+  background: #d1d5db;
+}
+
+#empresaEditBtn {
+  width: 100%;
+  margin-top: 20px;
+  padding: 12px;
+  border: none;
+  background: #2563eb;
+  color: white;
+  font-weight: 600;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: .2s;
+}
+
+#empresaEditBtn:hover {
+  background: #1d4ed8;
+}
+
+.empresa-card-view {
+  background: #fff;
+  border-radius: 12px;
+  padding: 14px;
+  width: 240px;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0,0,0,.1);
+  transition: .2s;
+}
+
+.empresa-card-view:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0,0,0,.15);
+}
+
+.empresa-card-view img {
+  width: 100%;
+  height: 140px;
+  object-fit: cover;
+  border-radius: 10px;
+  margin-bottom: 10px;
+}
+
+.empresa-search {
+    margin-bottom: 15px;
+}
+
+.empresa-search-input {
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid #d1d5db;
+    background: #f8f9fa;
+    font-size: 15px;
+}
+
+.empresa-search-input:focus {
+    outline: none;
+    border-color: var(--color-principal);
+    background: white;
+}
+
+.empresa-card-view {
+    position: relative;
+    cursor: pointer;
+    transition: 0.3s ease;
+}
+
+.empresa-card-view:hover {
+    transform: translateY(-4px);
+}
+
+.empresa-delete-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    border: none;
+    background: #dc2626;
+    color: white;
+    font-size: 16px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.empresa-delete-btn:hover {
+    background: #b91c1c;
+}
+
+/* =============================== */
+/*  TOOLBAR EMPRESAS (BOTÓN + SEARCH) */
+/* =============================== */
+
+.empresa-toolbar {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+    gap: 20px;
+}
+
+.add-empresa-btn {
+    padding: 10px 16px;
+    background: var(--color-principal);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.add-empresa-btn:hover {
+    background: #1d4ed8;
+    transform: translateY(-2px);
+}
+
+/* =============================== */
+/* BUSCADOR DE EMPRESAS */
+/* =============================== */
+
+.empresa-search {
+    padding: 10px 14px;
+    width: 260px;
+    border-radius: 10px;
+    border: 1px solid #d1d5db;
+    font-size: 15px;
+    background: #f9fafb;
+    transition: 0.2s;
+}
+
+.empresa-search:focus {
+    outline: none;
+    border-color: var(--color-principal);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    background: white;
+}
+
+/* =============================== */
+/* GRID DE TARJETAS */
+/* =============================== */
+
+.empresa-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 20px;
+}
+
+/* CARD VIEW DE EMPRESA */
+.empresa-card-view {
+    background: white;
+    padding: 14px;
+    border-radius: 14px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.empresa-card-view:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
+}
+
+.empresa-img {
+    width: 100%;
+    height: 140px;
+    object-fit: cover;
+    border-radius: 12px;
+    margin-bottom: 10px;
+}
+
+.empresa-info h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.empresa-info p {
+    margin: 4px 0;
+    color: #555;
+}
+
+/* =============================== */
+/* POPUP DE VISUALIZACIÓN DE EMPRESA */
+/* =============================== */
+
+.empresa-view-card {
+    width: 420px;
+    background: white;
+    padding: 26px;
+    border-radius: 16px;
+    box-shadow: var(--shadow-large);
+    position: relative;
+    animation: fadeIn 0.25s ease;
+}
+
+.empresa-view-img {
+    width: 100%;
+    height: 220px;
+    border-radius: 12px;
+    object-fit: cover;
+    margin-bottom: 15px;
+}
+
+.close-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: #ef4444;
+    color: white;
+    border-radius: 50%;
+    border: none;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+/* BOTÓN ELIMINAR */
+.btn-danger {
+    background: #dc2626 !important;
+    color: white !important;
+    padding: 10px;
+    border-radius: 10px;
+    border: none;
+    width: 100%;
+    margin-top: 10px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: 0.2s ease;
+}
+
+.btn-danger:hover {
+    background: #b91c1c !important;
+    transform: translateY(-2px);
+}
+
+.popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.4);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+}
+
+.popup-card {
+  background: white;
+  padding: 28px;
+  width: 380px;
+  border-radius: 16px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+  animation: fadeIn 0.25s ease;
+}
+
+.close-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background: var(--color-principal);
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+}
+
+.btn-secondary {
+  background: #e5e7eb;
+  padding: 10px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.btn-danger {
+  background: #dc2626;
+  color: white;
+  padding: 10px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.empresa-grid, .trabajador-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.empresa-card-view {
+  background: white;
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.07);
+  cursor: pointer;
+  transition: 0.2s ease-in-out;
+}
+
+.empresa-card-view:hover {
+  transform: translateY(-4px);
+}
+
+.empresa-img {
+  width: 100%;
+  height: 130px;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+.empresa-info h3 {
+  margin-top: 12px;
+}
+
+.empresa-view-card {
+  width: 420px;
+  text-align: center;
+  position: relative;
+}
+
+.empresa-view-img {
+  width: 150px;
+  height: 150px;
+  object-fit: cover;
+  border-radius: 100px;
+  margin-bottom: 16px;
+}
+
+.view-navigation {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin: 15px 0;
+}
+
+.view-navigation button {
+  background: #e5e7eb;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.empresa-edit-card input,
+.empresa-edit-card select {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 14px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  background: #f9fafb;
+  transition: 0.2s;
+}
+
+.empresa-edit-card input:focus,
+.empresa-edit-card select:focus {
+  border-color: var(--color-principal);
+  background: white;
+}
+
+
+.trabajador-toolbar,
+.empresa-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 10px;
+}
+
+.empresa-search {
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  width: 250px;
+  font-size: 15px;
+}
+
+
+/* =========================================================
+   TRABAJADORES - GRID Y CARDS
+   ========================================================= */
+
+.trabajador-card-view {
+    background: white;
+    border-radius: 14px;
+    padding: 18px;
+    box-shadow: var(--shadow);
+    cursor: pointer;
+    transition: 0.2s ease;
+    display: flex;
+    align-items: flex-start;
+}
+
+.trabajador-card-view:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.10);
+}
+
+.trabajador-info h3 {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--color-texto);
+    margin-bottom: 6px;
+}
+
+.trabajador-info p {
+    font-size: 14px;
+    margin: 4px 0;
+    color: #4b5563;
+}
+
+
+/* =========================================================
+   TOOLBAR (BUSCADOR + BOTÓN)
+   ========================================================= */
+
+.trabajador-toolbar {
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.trabajador-toolbar input {
+    width: 260px;
+}
+
+
+/* =========================================================
+   POPUP GENERAL
+   ========================================================= */
+
+#popupTrabajador,
+#popupTrabajadorView {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.45);
+    backdrop-filter: blur(4px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1500;
+}
+
+/* =========================================================
+   POPUP CARD (vista + edición)
+   ========================================================= */
+
+.trabajador-popup-card {
+    background: white;
+    width: 420px;
+    padding: 26px;
+    border-radius: 16px;
+    box-shadow: var(--shadow-large);
+    animation: fadeIn 0.25s ease;
+    position: relative;
+}
+
+.trabajador-popup-card h2 {
+    margin-bottom: 14px;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--color-texto);
+}
+
+
+/* =========================================================
+   BOTÓN DE CERRAR
+   ========================================================= */
+
+.close-btn {
+    position: absolute;
+    right: 14px;
+    top: 14px;
+    font-size: 18px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: #444;
+    transition: 0.2s;
+}
+
+.close-btn:hover {
+    color: #000;
+}
+
+
+/* =========================================================
+   CAMPOS DEL POPUP (editar/crear)
+   ========================================================= */
+
+#popupTrabajador label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 4px;
+    display: block;
+}
+
+#popupTrabajador input,
+#popupTrabajador select {
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    background: #f9fafb;
+    margin-bottom: 14px;
+    font-size: 15px;
+    transition: 0.2s ease;
+}
+
+#popupTrabajador input:focus,
+#popupTrabajador select:focus {
+    border-color: var(--color-principal);
+    background: white;
+}
+
+
+/* =========================================================
+   ACCIONES DEL POPUP
+   ========================================================= */
+
+.popup-actions {
+    margin-top: 10px;
+    text-align: right;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.btn-primary {
+    background: var(--color-principal);
+    color: white;
+    padding: 10px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: none;
+    transition: 0.2s;
+}
+
+.btn-primary:hover {
+    background: #1e4fd8;
+}
+
+.btn-danger {
+    background: #dc2626;
+    color: white;
+    padding: 10px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: none;
+    transition: 0.2s;
+}
+
+.btn-danger:hover {
+    background: #b91c1c;
+}
+
+.btn-secondary {
+    background: #e5e7eb;
+    padding: 10px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: none;
+}
+
+.btn-secondary:hover {
+    background: #d1d5db;
+}
+
+
+/* =========================================================
+   POPUP VISTA DE TRABAJADOR
+   ========================================================= */
+
+.tr-view-info {
+    margin-top: 15px;
+}
+
+.tr-view-info p {
+    font-size: 15px;
+    margin: 8px 0;
+}
+
+.tr-view-info b {
+    color: #1f2937;
+}
+
+
+/* =========================================================
+   ANIMACIÓN POPUP
+   ========================================================= */
+
+@keyframes fadeIn {
+    from { transform: scale(0.9); opacity: 0; }
+    to   { transform: scale(1);   opacity: 1; }
+}
+
+#popupTrabajadorView .close-btn {
+    color: #dc2626 !important;
+}
+
+#popupTrabajadorView .close-btn:hover {
+    color: #b91c1c !important;
+}
+
+.trabajador-view-img {
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin: 0 auto 14px auto;
+    display: block;
+    border: 3px solid #e5e7eb;
+}
+
+.trabajador-card-view img {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-bottom: 10px;
+}

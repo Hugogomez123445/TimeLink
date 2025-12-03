@@ -16,6 +16,7 @@ const passwordError = document.getElementById("passwordError");
 const strengthContainer = document.getElementById("passwordStrength");
 const strengthBar = document.getElementById("strengthBar");
 
+
 // Helper loader
 function setLoading(loading) {
   if (loading) {
@@ -86,7 +87,7 @@ actionBtn.addEventListener("click", async () => {
     // Guardar info admin
     localStorage.setItem("userId", result.user.id);
     localStorage.setItem("username", result.user.username);
-    localStorage.setItem("email", result.user.email); 
+    localStorage.setItem("email", result.user.email);
     localStorage.setItem("role", result.user.role);
 
     window.location.href = "./main/mainApp.html";
@@ -100,12 +101,27 @@ actionBtn.addEventListener("click", async () => {
       const result = await window.api.loginUser({ username, password });
 
       if (result.success) {
+
+        if (result.user.role === "admin") {
+          alert("Los administradores deben iniciar sesión desde el Portal Admin.");
+          setLoading(false);
+          return;
+        }
+
+        if (result.user.role === "trabajador") {
+          alert("Los trabajadores deben iniciar sesión desde el Portal Trabajador.");
+          setLoading(false);
+          return;
+        }
+
+        // Guardar datos usuario normal
         localStorage.setItem("userId", result.user.id);
         localStorage.setItem("username", result.user.username);
         localStorage.setItem("email", result.user.email);
         localStorage.setItem("role", result.user.role);
 
         window.location.href = "./main/mainApp.html";
+
       } else {
         const card = document.querySelector(".container");
         card.classList.add("shake");
@@ -119,6 +135,8 @@ actionBtn.addEventListener("click", async () => {
       setLoading(false);
     }
   }
+
+
 
   // ========== REGISTRO CLIENTE ==========
   else {
@@ -237,11 +255,65 @@ document.getElementById("loginAdminBtn").addEventListener("click", async () => {
   localStorage.setItem("userId", result.user.id);
   localStorage.setItem("username", result.user.username);
   localStorage.setItem("email", result.user.email);
-localStorage.setItem("role", result.user.role);
+  localStorage.setItem("role", result.user.role);
 
-    window.location.href = "./main/mainApp.html";
+  window.location.href = "./main/mainApp.html";
 
 });
+
+// MOSTRAR POPUP TRABAJADOR
+document.getElementById("workerAccess").addEventListener("click", () => {
+  document.getElementById("popupWorker").style.display = "flex";
+});
+
+// CERRAR POPUP TRABAJADOR
+document.getElementById("cancelWorker").onclick = () => {
+  document.getElementById("popupWorker").style.display = "none";
+};
+
+// LOGIN TRABAJADOR
+document.getElementById("loginWorkerBtn").addEventListener("click", async () => {
+  const user = document.getElementById("workerUser").value.trim();
+  const pass = document.getElementById("workerPass").value.trim();
+
+  if (!user || !pass) {
+    alert("Completa todos los campos.");
+    return;
+  }
+
+  const result = await window.api.loginUser({ username: user, password: pass });
+
+  if (!result.success) {
+    alert("Credenciales incorrectas.");
+    return;
+  }
+
+  if (result.user.role !== "trabajador") {
+    alert("Este usuario no tiene acceso de trabajador.");
+    return;
+  }
+
+  // Guardar datos de sesión
+  localStorage.setItem("userId", result.user.id);
+  localStorage.setItem("username", result.user.username);
+  localStorage.setItem("email", result.user.email);
+  localStorage.setItem("role", result.user.role);
+
+  window.location.href = "./main/mainApp.html";
+});
+
+document.getElementById("adminAccess").addEventListener("click", () => {
+  document.getElementById("popupWorker").style.display = "none"; // Cerrar otro
+  document.getElementById("popupAdmin").style.display = "flex";
+});
+
+document.getElementById("workerAccess").addEventListener("click", () => {
+  document.getElementById("popupAdmin").style.display = "none"; // Cerrar otro
+  document.getElementById("popupWorker").style.display = "flex";
+});
+
+
+
 
 // Mostrar / ocultar contraseña
 document.getElementById("togglePassword").addEventListener("click", () => {

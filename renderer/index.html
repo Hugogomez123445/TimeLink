@@ -161,8 +161,11 @@
       }
     }
 
-    /* POPUP ADMIN */
-    #popupAdmin {
+    /* =============================== */
+    /*  POPUPS ADMIN Y TRABAJADOR      */
+    /* =============================== */
+
+    .popup-overlay {
       position: fixed;
       top: 0;
       left: 0;
@@ -176,7 +179,7 @@
       z-index: 9999;
     }
 
-    #popupAdmin .popup-card {
+    .popup-card {
       background: var(--color-tarjeta);
       width: 300px;
       padding: 25px;
@@ -185,29 +188,89 @@
       animation: fadeIn 0.25s ease;
     }
 
-    #popupAdmin input {
-      width: 100%;
-      padding: 10px;
-      margin-bottom: 10px;
-      border-radius: 6px;
-      border: 1px solid var(--color-borde);
-      background: #f9fafb;
+    .popup-card h2 {
+      text-align: center;
+      color: var(--color-texto);
+      font-weight: 600;
+      margin-bottom: 15px;
     }
 
-    #popupAdmin button {
+    .popup-card input {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid var(--color-borde);
+      background: #f9fafb;
+      margin-top: 10px;
+      font-size: 14px;
+    }
+
+    .popup-card button {
       padding: 8px 12px;
       border-radius: 6px;
       border: none;
       cursor: pointer;
+      font-size: 14px;
     }
 
-    #cancelAdmin {
+    .popup-btn-cancel {
       background: #ddd;
     }
 
-    #loginAdminBtn {
+    .popup-btn-confirm {
       background: #2563eb;
       color: white;
+    }
+
+    .popup-buttons {
+      display: flex;
+      justify-content: right;
+      gap: 8px;
+      margin-top: 15px;
+    }
+
+    /* Animación aparición */
+    @keyframes fadeIn {
+      from {
+        transform: scale(0.9);
+        opacity: 0;
+      }
+
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    /* ========================== */
+    /* Botones de portal (admin / trabajador) */
+    /* ========================== */
+
+    .access-buttons {
+      margin-top: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .access-btn {
+      padding: 10px 14px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #2563eb;
+      background: #eef3ff;
+      border: 1px solid #d2ddff;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: 0.2s ease;
+    }
+
+    .access-btn:hover {
+      background: #2563eb;
+      color: white;
+      border-color: #2563eb;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
     }
   </style>
 </head>
@@ -242,25 +305,47 @@
 
     <div class="toggle" id="toggleText">¿No tienes cuenta? Regístrate</div>
 
-    <p id="adminAccess" style="margin-top:15px; color:#2563eb; cursor:pointer;">Entrar como administrador 🔐</p>
+    <div class="access-buttons">
+      <button id="adminAccess" class="access-btn">Portal admin</button>
+      <button id="workerAccess" class="access-btn">Portal trabajador</button>
+    </div>
+
   </div>
 
-  <!-- POPUP ADMIN -->
-  <div id="popupAdmin">
+  <div id="popupWorker" class="popup-overlay">
     <div class="popup-card">
-      <h2 style="text-align:center;">Acceso Administrador</h2>
+      <h2>Acceso Trabajador</h2>
 
-      <input id="adminUser" type="text" placeholder="Usuario">
-      <input id="adminPass" type="password" placeholder="Contraseña">
+      <input id="workerUser" type="text" placeholder="Usuario">
+      <input id="workerPass" type="password" placeholder="Contraseña">
 
-      <div style="display:flex; justify-content:right; gap:8px;">
-        <button id="cancelAdmin">Cancelar</button>
-        <button id="loginAdminBtn">Entrar</button>
+      <div class="popup-buttons">
+        <button id="cancelWorker" class="popup-btn-cancel">Cancelar</button>
+        <button id="loginWorkerBtn" class="popup-btn-confirm">Entrar</button>
       </div>
     </div>
   </div>
 
+
+  <div id="popupAdmin" class="popup-overlay">
+    <div class="popup-card">
+      <h2>Acceso Administrador</h2>
+
+      <input id="adminUser" type="text" placeholder="Usuario">
+      <input id="adminPass" type="password" placeholder="Contraseña">
+
+      <div class="popup-buttons">
+        <button id="cancelAdmin" class="popup-btn-cancel">Cancelar</button>
+        <button id="loginAdminBtn" class="popup-btn-confirm">Entrar</button>
+      </div>
+    </div>
+  </div>
+
+  </div>
+
+
   <script src="./renderer.js"></script>
 
 </body>
+
 </html>
