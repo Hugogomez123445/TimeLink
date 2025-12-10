@@ -176,7 +176,7 @@ app.get("/trabajadores", (req, res) => {
 
   db.all(sql, [], (err, rows) => {
     if (err) {
-      console.error("❌ ERROR SQL:", err.message);
+      console.error("ERROR SQL:", err.message);
       return res.status(500).send("Error en DB: " + err.message);
     }
 

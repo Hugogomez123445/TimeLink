@@ -1,10 +1,10 @@
 // ========================================================
-// Sección: Variables, roles, navegación, calendario y popups
+// TimeLink - renderer1.js optimizado
 // ========================================================
 
-// ========================================================
-// OBTENER DATOS DEL USUARIO
-// ========================================================
+// ======================
+// DATOS DEL USUARIO
+// ======================
 const userId = localStorage.getItem("userId");
 const role = localStorage.getItem("role") || "cliente";
 const username = localStorage.getItem("username") || "Usuario";
@@ -14,41 +14,50 @@ const userEmail = localStorage.getItem("email") || "email@example.com";
 document.getElementById("userName").textContent = username;
 document.getElementById("userEmail").textContent = userEmail;
 
-// ========================================================
-// CONTROL DE PERMISOS SEGÚN ROL
-// ========================================================
+// ======================
+// CONTROL DE PERMISOS POR ROL
+// ======================
+const btnCalendario = document.getElementById("btnCalendario");
+const btnClientes = document.getElementById("btnClientes");
+const btnCitas = document.getElementById("btnCitas");
+const btnEmpresas = document.getElementById("btnEmpresas");
+const btnTrabajadores = document.getElementById("btnTrabajadores");
+const adminPanelBtn = document.getElementById("adminPanelBtn");
+const submenuAdminContainer = document.getElementById("submenuAdminContainer");
+
+// Cliente
 if (role === "cliente") {
-    document.getElementById("btnTrabajadores").style.display = "none";
-    document.getElementById("btnEmpresas").style.display = "none";
+    if (btnTrabajadores) btnTrabajadores.style.display = "none";
+    if (btnEmpresas) btnEmpresas.style.display = "none";
+    if (adminPanelBtn) adminPanelBtn.style.display = "none";
 }
 
-else if (role === "trabajador") {
-    document.getElementById("btnTrabajadores").style.display = "none";
-    document.getElementById("btnEmpresas").style.display = "none";
+// Trabajador
+if (role === "trabajador") {
+    if (btnTrabajadores) btnTrabajadores.style.display = "none";
+    if (btnEmpresas) btnEmpresas.style.display = "none";
+    if (adminPanelBtn) adminPanelBtn.style.display = "block"; // Panel Admin básico
 }
 
-else if (role === "admin") {
-    document.getElementById("btnCalendario").style.display = "none";
-    document.getElementById("btnClientes").style.display = "none";
-    document.getElementById("btnCitas").style.display = "none";
-    document.getElementById("adminPanelBtn").style.display = "none";
+// Admin
+if (role === "admin") {
+    if (btnCalendario) btnCalendario.style.display = "none";
+    if (btnClientes) btnClientes.style.display = "none";
+    if (btnCitas) btnCitas.style.display = "none";
+    if (adminPanelBtn) adminPanelBtn.style.display = "none";
 
-    document.getElementById("btnTrabajadores").style.display = "block";
-    document.getElementById("btnEmpresas").style.display = "block";
+    if (btnTrabajadores) btnTrabajadores.style.display = "block";
+    if (btnEmpresas) btnEmpresas.style.display = "block";
 }
 
 // Submenú solo admin
-document.getElementById("submenuAdminContainer").style.display =
-    role === "admin" ? "block" : "none";
-
-// Mostrar panel admin a trabajadores
-if (role === "trabajador") {
-    document.getElementById("adminPanelBtn").style.display = "block";
+if (submenuAdminContainer) {
+    submenuAdminContainer.style.display = role === "admin" ? "block" : "none";
 }
 
-// ========================================================
-// VARIABLES GLOBALES (Calendario, Popups)
-// ========================================================
+// ======================
+// VARIABLES GLOBALES
+// ======================
 let calendar = null;
 let popupFecha = "";
 let popupHora = "";
@@ -56,44 +65,127 @@ let isEditing = false;
 let editingEvent = null;
 let editingId = null;
 
-// ========================================================
+// EMPRESAS
+let empresasGlobal = [];
+let empresaIndex = null;
+let empresaActual = null;
+
+// TRABAJADORES
+let trabajadoresGlobal = [];
+let trabajadorIndex = null;
+let trabajadorActual = null;
+let empresasGlobalList = []; // Empresas para el select de trabajador
+
+// ======================
+// HELPERS
+// ======================
+function getInicial(nombre) {
+    return nombre ? nombre.charAt(0).toUpperCase() : "?";
+}
+
+function getAvatarHTML(imagen, nombre, tipo = "card") {
+    const inicial = getInicial(nombre);
+
+    if (tipo === "popup") {
+        return imagen
+            ? `<img class="trabajador-avatar-popup" src="${imagen}">`
+            : `<div class="trabajador-avatar-popup-inicial">${inicial}</div>`;
+    }
+
+    // tarjeta/lista
+    return imagen
+        ? `<img class="trabajador-avatar" src="${imagen}">`
+        : `<div class="trabajador-avatar-inicial">${inicial}</div>`;
+}
+
+function fileToBase64(file) {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.readAsDataURL(file);
+    });
+}
+
+// ======================
 // NAVEGACIÓN PRINCIPAL
-// ========================================================
+// ======================
+function setActiveButton(section) {
+    const buttons = document.querySelectorAll(".menu button");
+    buttons.forEach(btn => btn.classList.remove("active"));
+
+    const map = {
+        inicio: "btnInicio",
+        calendario: "btnCalendario",
+        clientes: "btnClientes",
+        citas: "btnCitas",
+        ajustes: "btnAjustes",
+        adminPanel: "adminPanelBtn",
+        empresas: "btnEmpresas",
+        trabajadores: "btnTrabajadores",
+    };
+
+    const id = map[section];
+    if (id) {
+        const btn = document.getElementById(id);
+        if (btn) btn.classList.add("active");
+    }
+}
+
 function navigate(section) {
     const main = document.getElementById("mainContent");
-    const buttons = document.querySelectorAll(".menu button");
-
-    buttons.forEach(btn => btn.classList.remove("active"));
-    event.target.classList.add("active");
+    setActiveButton(section);
 
     switch (section) {
         case "inicio":
-            main.innerHTML = "<h1>Inicio 🏠</h1><p>Bienvenido a TimeLink.</p>";
+            if (role === "admin") cargarInicioAdmin();
+            else cargarInicioBasico();
             break;
 
-        case "calendario": renderCalendario(main); break;
-        case "clientes": renderClientes(main); break;
-        case "ajustes":
-            main.innerHTML = "<h1>Ajustes ⚙️</h1><p>Configuraciones del usuario.</p>";
+        case "calendario":
+            renderCalendario(main);
+            break;
+
+        case "clientes":
+            renderClientes(main);
             break;
 
         case "citas":
             main.innerHTML = "<h1>Citas 📝</h1><p>Gestión de citas próximamente.</p>";
             break;
 
-        case "adminPanel": renderAdminPanel(main); break;
-        case "adminUsuarios": renderAdminUsuarios(main); break;
-        case "adminCitas": renderAdminCitas(main); break;
-        case "trabajadores": renderTrabajadores(main); break;
-        case "empresas": renderEmpresas(main); break;
+        case "ajustes":
+            main.innerHTML = "<h1>Ajustes ⚙️</h1><p>Configuraciones del usuario.</p>";
+            break;
+
+        case "adminPanel":
+            renderAdminPanel(main);
+            break;
+
+        case "adminUsuarios":
+            renderAdminUsuarios(main);
+            break;
+
+        case "adminCitas":
+            renderAdminCitas(main);
+            break;
+
+        case "empresas":
+            renderEmpresas(main);
+            break;
+
+        case "trabajadores":
+            renderTrabajadores(main);
+            break;
     }
 }
 
-// ========================================================
-// CALENDARIO - RENDER COMPLETO
-// ========================================================
-async function renderCalendario(main) {
+// Hacer accesible desde el HTML inline
+window.navigate = navigate;
 
+// ======================
+// CALENDARIO
+// ======================
+async function renderCalendario(main) {
     main.innerHTML = `
         <h1>Calendario 📅</h1>
         <div id="calendar" style="margin-top:20px;"></div>
@@ -105,12 +197,10 @@ async function renderCalendario(main) {
     `;
 
     setTimeout(async () => {
-
         const hourPanel = document.getElementById("hourPanel");
         const hourList = document.getElementById("hourList");
         const calendarEl = document.getElementById("calendar");
 
-        // Crear calendario
         calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: "dayGridMonth",
             locale: "es",
@@ -122,17 +212,14 @@ async function renderCalendario(main) {
                 center: "title",
                 right: "dayGridMonth,timeGridWeek,timeGridDay",
             },
-
             dateClick(info) {
                 hourPanel.style.display = "none";
                 generateHours(info.dateStr);
             },
-
             eventClick(info) {
                 const ev = info.event;
                 const evUserId = ev.extendedProps.userId;
 
-                // Clientes no pueden tocar citas ajenas
                 if (role !== "admin" && String(evUserId) !== String(userId)) {
                     alert("No puedes modificar citas de otros clientes.");
                     return;
@@ -147,13 +234,9 @@ async function renderCalendario(main) {
 
         calendar.render();
 
-        // Cargar citas
         const citas = await window.api.getCitas("ALL");
         citas.forEach(c => addCitaToCalendar(c));
 
-        // ============================
-        // Generar horas disponibles
-        // ============================
         function generateHours(dateStr) {
             hourList.innerHTML = "";
             hourPanel.style.display = "block";
@@ -183,9 +266,6 @@ async function renderCalendario(main) {
             }
         }
 
-        // ============================
-        // POPUP NUEVA CITA
-        // ============================
         function openNewCitaPopup(date, hour) {
             isEditing = false;
             editingEvent = null;
@@ -202,9 +282,6 @@ async function renderCalendario(main) {
             document.getElementById("popupCita").style.display = "flex";
         }
 
-        // ============================
-        // EDITAR CITA
-        // ============================
         function openEditPopup(ev) {
             isEditing = true;
             editingEvent = ev;
@@ -223,22 +300,15 @@ async function renderCalendario(main) {
             document.getElementById("popupCita").style.display = "flex";
         }
 
-        // ============================
-        // ELIMINAR CITA
-        // ============================
         async function deleteEvent(ev) {
             if (confirm("¿Eliminar esta cita?")) {
                 await window.api.deleteCita(ev.extendedProps.id);
                 ev.remove();
             }
         }
-
     }, 50);
 }
 
-// ========================================================
-// AÑADIR EVENTO VISUAL AL CALENDARIO
-// ========================================================
 function addCitaToCalendar(c) {
     if (!calendar) return;
 
@@ -248,7 +318,6 @@ function addCitaToCalendar(c) {
         title: role === "admin"
             ? `${c.cliente} (${c.username})`
             : esPropia ? c.cliente : "Ocupado",
-
         start: `${c.fecha}T${c.hora}`,
         backgroundColor: esPropia ? "#2563eb" : "#dc2626",
         borderColor: esPropia ? "#2563eb" : "#dc2626",
@@ -263,14 +332,12 @@ function addCitaToCalendar(c) {
     });
 }
 
-// ========================================================
-// POPUP GUARDAR / CANCELAR CITA
-// ========================================================
-document.getElementById("cancelarPopup").onclick = () =>
+// Guardar / cancelar popup cita
+document.getElementById("cancelarPopup").onclick = () => {
     document.getElementById("popupCita").style.display = "none";
+};
 
 document.getElementById("guardarPopup").onclick = async () => {
-
     const cliente = document.getElementById("citaCliente").value;
     const telefono = document.getElementById("citaTelefono").value;
     const nota = document.getElementById("citaNota").value;
@@ -281,7 +348,6 @@ document.getElementById("guardarPopup").onclick = async () => {
     }
 
     if (isEditing && editingId) {
-
         await window.api.updateCita({
             id: editingId,
             fecha: popupFecha,
@@ -299,9 +365,7 @@ document.getElementById("guardarPopup").onclick = async () => {
             editingEvent.setExtendedProp("telefono", telefono);
             editingEvent.setExtendedProp("nota", nota);
         }
-
     } else {
-
         const nueva = await window.api.addCita({
             fecha: popupFecha,
             hora: popupHora,
@@ -328,19 +392,12 @@ document.getElementById("guardarPopup").onclick = async () => {
     document.getElementById("popupCita").style.display = "none";
 };
 
-
-// ========================================================
-// Sección: Clientes, Panel Admin, Usuarios, Citas y Trabajadores
-// ========================================================
-
-
-// ========================================================
-// CLIENTES (solo Admin / Trabajador)
-// ========================================================
+// ======================
+// CLIENTES (solo admin / trabajador)
+// ======================
 async function renderClientes(main) {
-
     if (role !== "admin" && role !== "trabajador") {
-        main.innerHTML = `<h1>Acceso denegado 🔒</h1>`;
+        main.innerHTML = "<h1>Acceso denegado 🔒</h1>";
         return;
     }
 
@@ -349,14 +406,12 @@ async function renderClientes(main) {
 
         <div class="clientes-layout">
 
-            <!-- Lista de clientes -->
             <div class="clientes-card">
                 <h3>Lista de clientes</h3>
                 <p class="sub">Selecciona un cliente para ver sus citas.</p>
                 <div id="clientesListaInner"></div>
             </div>
 
-            <!-- Citas del cliente -->
             <div class="clientes-card cliente-citas">
                 <h3 id="clienteTitulo">Citas del cliente</h3>
                 <div id="clienteCitasContenido" class="cliente-citas-contenido">
@@ -367,31 +422,25 @@ async function renderClientes(main) {
         </div>
     `;
 
-    // Esperar DOM listo antes de pintar
     setTimeout(async () => {
-
         const listaDiv = document.getElementById("clientesListaInner");
         const contenidoDiv = document.getElementById("clienteCitasContenido");
         const tituloCliente = document.getElementById("clienteTitulo");
 
         const citas = await window.api.getCitas("ALL");
-
-        // Agrupar citas por cliente
         const porCliente = {};
+
         citas.forEach(c => {
             if (!porCliente[c.cliente]) porCliente[c.cliente] = [];
             porCliente[c.cliente].push(c);
         });
 
-        // Pintar lado izquierdo (lista)
         Object.keys(porCliente).forEach(nombre => {
-
             const item = document.createElement("div");
             item.className = "cliente-item";
             item.textContent = nombre;
 
             item.onclick = () => {
-
                 tituloCliente.textContent = `Citas de ${nombre}`;
 
                 let html = `
@@ -426,16 +475,17 @@ async function renderClientes(main) {
 
             listaDiv.appendChild(item);
         });
-
     }, 60);
 }
 
-
-
-// ========================================================
-// PANEL DE ADMINISTRACIÓN PRINCIPAL
-// ========================================================
+// ======================
+// PANEL ADMIN (para trabajadores / admin)
+// ======================
 function renderAdminPanel(main) {
+    if (role !== "trabajador" && role !== "admin") {
+        main.innerHTML = "<h1>Acceso denegado 🔒</h1>";
+        return;
+    }
 
     main.innerHTML = `
         <h1>Panel de Administración ⭐</h1>
@@ -458,13 +508,10 @@ function renderAdminPanel(main) {
     `;
 }
 
-
-
-// ========================================================
-// ADMIN - GESTIÓN DE USUARIOS
-// ========================================================
+// ======================
+// ADMIN - USUARIOS
+// ======================
 async function renderAdminUsuarios(main) {
-
     const usuarios = await window.api.getAllUsers();
 
     main.innerHTML = `
@@ -488,7 +535,6 @@ async function renderAdminUsuarios(main) {
     const tbody = document.getElementById("tablaUsuarios");
 
     usuarios.forEach(u => {
-
         const tr = document.createElement("tr");
 
         tr.innerHTML = `
@@ -512,42 +558,29 @@ async function renderAdminUsuarios(main) {
         tbody.appendChild(tr);
     });
 
-    // ========== CAMBIAR ROL ==========
     tbody.querySelectorAll("select").forEach(sel => {
-
         sel.onchange = async () => {
-
             await window.api.updateUserRole({
                 id: sel.getAttribute("data-user-id"),
                 role: sel.value
             });
-
             alert("Rol actualizado correctamente");
         };
     });
 
-    // ========== ELIMINAR USUARIO ==========
     tbody.querySelectorAll("button[data-del]").forEach(btn => {
-
         btn.onclick = async () => {
-
             if (!confirm("¿Eliminar este usuario?")) return;
-
             await window.api.deleteUser(btn.getAttribute("data-del"));
-
-            // Recargar sección
             renderAdminUsuarios(main);
         };
     });
 }
 
-
-
-// ========================================================
-// ADMIN - TODAS LAS CITAS
-// ========================================================
+// ======================
+// ADMIN - CITAS
+// ======================
 async function renderAdminCitas(main) {
-
     const citas = await window.api.getCitas("ALL");
 
     main.innerHTML = `
@@ -573,7 +606,6 @@ async function renderAdminCitas(main) {
     const tbody = document.getElementById("tablaCitas");
 
     citas.forEach(c => {
-
         const tr = document.createElement("tr");
 
         tr.innerHTML = `
@@ -593,72 +625,24 @@ async function renderAdminCitas(main) {
         tbody.appendChild(tr);
     });
 
-    // ========== EDITAR CITA ==========
     tbody.querySelectorAll("button[data-edit]").forEach(btn => {
-
         btn.onclick = () => {
-
             const id = btn.getAttribute("data-edit");
             const c = citas.find(ci => ci.id == id);
-
             openEditPopupFromAdmin(c);
         };
     });
 
-    // ========== ELIMINAR CITA ==========
     tbody.querySelectorAll("button[data-del]").forEach(btn => {
-
         btn.onclick = async () => {
-
             if (!confirm("¿Eliminar esta cita?")) return;
-
             await window.api.deleteCita(btn.getAttribute("data-del"));
-
             renderAdminCitas(main);
         };
     });
 }
 
-
-
-// ========================================================
-// ADMIN - TRABAJADORES
-// ========================================================
-async function renderTrabajadores(main) {
-
-    if (role !== "admin") {
-        main.innerHTML = "<h1>Acceso denegado 🔒</h1>";
-        return;
-    }
-
-    main.innerHTML = `
-        <h1>Trabajadores 👥</h1>
-        <p>Gestión de trabajadores.</p>
-
-        <div id="trabajadoresLista"></div>
-    `;
-
-    const users = await window.api.getAllUsers();
-    const trabajadores = users.filter(u => u.role === "trabajador");
-
-    let html = "<ul>";
-
-    trabajadores.forEach(t => {
-        html += `<li>${t.username} — ${t.email}</li>`;
-    });
-
-    html += "</ul>";
-
-    document.getElementById("trabajadoresLista").innerHTML = html;
-}
-
-
-
-// ========================================================
-// EDITAR CITA DESDE ADMIN
-// ========================================================
 function openEditPopupFromAdmin(c) {
-
     isEditing = true;
     editingEvent = null;
     editingId = c.id;
@@ -667,95 +651,64 @@ function openEditPopupFromAdmin(c) {
     popupHora = c.hora;
 
     document.getElementById("citaCliente").value = c.cliente;
-    document.getElementById("citaTelefono").value = c.telefono;
-    document.getElementById("citaNota").value = c.nota;
+    document.getElementById("citaTelefono").value = c.telefono || "";
+    document.getElementById("citaNota").value = c.nota || "";
 
     document.getElementById("popupTitulo").textContent = "Editar cita";
     document.getElementById("popupCita").style.display = "flex";
 }
 
-// ========================================================
-// SECCIÓN EMPRESAS (lista, buscador, vista previa, editar)
-// ========================================================
-
-// Variables globales de empresas
-let empresasGlobal = [];   // Array con TODAS las empresas
-let empresaIndex = 0;      // Índice usado para navegar en el popup
-let empresaActual = null;  // Empresa actualmente mostrada en el popup
-
-// ========================================================
-// Renderizar la pantalla de EMPRESAS
-// ========================================================
+// ======================
+// EMPRESAS
+// ======================
 async function renderEmpresas(main) {
-
     if (role !== "admin") {
         main.innerHTML = "<h1>Acceso denegado 🔒</h1>";
         return;
     }
 
-    // Obtener empresas de la BD
     empresasGlobal = await window.api.getEmpresas();
 
-    // Estructura general de la pantalla
     main.innerHTML = `
         <h1 class="title-page">Empresas 🏢</h1>
 
-        <!-- 🔍 BUSCADOR -->
         <div class="empresa-toolbar">
-            <input id="buscarEmpresa" 
-                   class="empresa-search" 
-                   type="text"
-                   placeholder="🔍 Buscar empresa...">
-        </div>
-
-        <!-- Botón añadir -->
-        <div class="empresa-actions">
             <button class="btn-primary add-empresa-btn" onclick="nuevaEmpresa()">
                 ➕ Añadir empresa
             </button>
+
+            <input id="buscarEmpresa"
+                class="empresa-search"
+                type="text"
+                placeholder="🔍 Buscar empresa...">
         </div>
 
-        <!-- GRID donde se pintan los cards -->
         <div id="empresaGrid" class="empresa-grid"></div>
     `;
 
-    // Pintar todas las empresas al entrar
     pintarEmpresas(empresasGlobal);
 
-    // Filtro del buscador
     document.getElementById("buscarEmpresa").oninput = (e) => {
         const q = e.target.value.toLowerCase();
-
         const filtradas = empresasGlobal.filter(emp =>
             emp.nombre.toLowerCase().includes(q)
         );
-
         pintarEmpresas(filtradas);
     };
 }
 
-
-// ========================================================
-// Pintar los CARD VIEW de empresas
-// ========================================================
 function pintarEmpresas(lista) {
-
     const grid = document.getElementById("empresaGrid");
     if (!grid) return;
 
-    // Si no hay resultados
     if (lista.length === 0) {
         grid.innerHTML = `<p class="empty-text">No hay empresas que coincidan con la búsqueda.</p>`;
         return;
     }
 
-    // Pintado dinámico
     grid.innerHTML = lista.map((e, index) => `
         <div class="empresa-card-view" onclick="abrirEmpresa(${index})">
-
-            <img src="${e.imagen || '../assets/default_company.png'}"
-                 class="empresa-img">
-
+            <img src="${e.imagen || '../assets/default_company.png'}" class="empresa-img">
             <div class="empresa-info">
                 <h3>${e.nombre}</h3>
                 <p><b>Dirección:</b> ${e.direccion || "—"}</p>
@@ -765,69 +718,45 @@ function pintarEmpresas(lista) {
     `).join("");
 }
 
-
-// ========================================================
-// ELIMINAR empresa desde el CARD (NO desde popup)
-// ========================================================
 async function eliminarEmpresa(ev, id) {
-    ev.stopPropagation(); // Evita abrir el popup al pulsar eliminar
-
+    ev.stopPropagation();
     if (!confirm("¿Eliminar esta empresa?")) return;
 
     await window.api.deleteEmpresa(id);
-
-    // Actualizar lista en memoria
     empresasGlobal = empresasGlobal.filter(e => e.id !== id);
-
-    // Repintar la UI
     pintarEmpresas(empresasGlobal);
 }
 
-
-
-// ========================================================
-// POPUP NUEVA / EDITAR EMPRESA
-// ========================================================
-
-// Abrir popup vacío → MODO CREAR
 function nuevaEmpresa() {
-    empresaIndex = null; // NO estamos editando
+    empresaIndex = null;
     limpiarPopupEmpresa();
     document.getElementById("popupEmpresa").style.display = "flex";
 }
 
-// Cerrar popup de empresa
 document.getElementById("cancelarEmpresaPopup").onclick = () => {
     limpiarPopupEmpresa();
     document.getElementById("popupEmpresa").style.display = "none";
 };
 
-
-// Guardar empresa (CREAR o EDITAR)
-// Guardar empresa (CREAR o EDITAR)
 document.getElementById("guardarEmpresaPopup").onclick = async () => {
-
-    // 🔹 Tomamos los elementos del DOM de forma segura
-    const nombreInput    = document.getElementById("empNombre");
+    const nombreInput = document.getElementById("empNombre");
     const direccionInput = document.getElementById("empDireccion");
-    const telefonoInput  = document.getElementById("empTelefono");
-    const imgInput       = document.getElementById("empImagen");
+    const telefonoInput = document.getElementById("empTelefono");
+    const imgInput = document.getElementById("empImagen");
 
-    const nombre    = nombreInput.value.trim();
+    const nombre = nombreInput.value.trim();
     const direccion = direccionInput.value.trim();
-    const telefono  = telefonoInput.value.trim();
+    const telefono = telefonoInput.value.trim();
 
     if (!nombre) {
         alert("El nombre es obligatorio.");
         return;
     }
 
-    // 🔹 Mantener la imagen anterior si estamos editando
     let imagen = (empresaIndex !== null && empresaIndex !== undefined)
         ? empresasGlobal[empresaIndex].imagen
         : null;
 
-    // Si se ha elegido una nueva imagen, la convertimos a base64
     if (imgInput.files.length > 0) {
         imagen = await fileToBase64(imgInput.files[0]);
     }
@@ -835,7 +764,6 @@ document.getElementById("guardarEmpresaPopup").onclick = async () => {
     const esEdicion = empresaIndex !== null && empresaIndex !== undefined;
 
     if (esEdicion) {
-        // 🔄 EDITAR EMPRESA
         await window.api.updateEmpresa({
             id: empresasGlobal[empresaIndex].id,
             nombre,
@@ -844,7 +772,6 @@ document.getElementById("guardarEmpresaPopup").onclick = async () => {
             imagen
         });
     } else {
-        // ➕ CREAR EMPRESA
         await window.api.addEmpresa({
             nombre,
             direccion,
@@ -853,32 +780,12 @@ document.getElementById("guardarEmpresaPopup").onclick = async () => {
         });
     }
 
-    // Limpiar popup y cerrarlo
     limpiarPopupEmpresa();
     document.getElementById("popupEmpresa").style.display = "none";
-
-    // Recargar SOLO la sección de empresas
     const main = document.getElementById("mainContent");
     await renderEmpresas(main);
 };
 
-
-
-// ========================================================
-// Convertir archivo a Base64
-// ========================================================
-function fileToBase64(file) {
-    return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.readAsDataURL(file);
-    });
-}
-
-
-// ========================================================
-// Limpiar campos del popup de empresa
-// ========================================================
 function limpiarPopupEmpresa() {
     document.getElementById("empNombre").value = "";
     document.getElementById("empDireccion").value = "";
@@ -886,13 +793,7 @@ function limpiarPopupEmpresa() {
     document.getElementById("empImagen").value = "";
 }
 
-
-
-// ========================================================
-// POPUP VER EMPRESA (vista previa con navegación)
-// ========================================================
 function abrirEmpresa(index) {
-
     empresaIndex = index;
     empresaActual = empresasGlobal[index];
 
@@ -900,104 +801,48 @@ function abrirEmpresa(index) {
         empresaActual.imagen || "../assets/default_company.png";
 
     document.getElementById("empresaViewNombre").textContent = empresaActual.nombre;
-
     document.getElementById("empresaViewDireccion").textContent =
         "📍 " + (empresaActual.direccion || "Sin dirección");
-
     document.getElementById("empresaViewTelefono").textContent =
         "📞 " + (empresaActual.telefono || "Sin teléfono");
 
     document.getElementById("popupEmpresaView").style.display = "flex";
 }
 
-
-
-// ========================================================
-// Navegación del popup de vista previa
-// ========================================================
-document.getElementById("empresaPrevBtn").onclick = () => {
-    empresaIndex = (empresaIndex - 1 + empresasGlobal.length) % empresasGlobal.length;
-    abrirEmpresa(empresaIndex);
-};
-
-document.getElementById("empresaNextBtn").onclick = () => {
-    empresaIndex = (empresaIndex + 1) % empresasGlobal.length;
-    abrirEmpresa(empresaIndex);
-};
-
-
-// Cerrar popup de vista previa
 document.getElementById("empresaViewClose").onclick = () => {
     document.getElementById("popupEmpresaView").style.display = "none";
 };
 
-
-
-// ========================================================
-// BOTÓN EDITAR dentro del popup de vista previa
-// ========================================================
 document.getElementById("empresaEditBtn").onclick = () => {
-
     const e = empresasGlobal[empresaIndex];
 
-    // Rellenar popup de edición
     document.getElementById("empNombre").value = e.nombre;
     document.getElementById("empDireccion").value = e.direccion || "";
     document.getElementById("empTelefono").value = e.telefono || "";
 
-    // Ocultar vista previa
     document.getElementById("popupEmpresaView").style.display = "none";
-
-    // Mostrar popup de edición
     document.getElementById("popupEmpresa").style.display = "flex";
 };
 
-
-
-// ========================================================
-// ELIMINAR empresa desde POPUP DE VISTA PREVIA
-// ========================================================
 document.getElementById("borrarEmpresaPreview").onclick = async () => {
-
     if (!empresaActual) return;
 
     const confirmar = confirm(
         `¿Seguro que quieres eliminar "${empresaActual.nombre}"?`
     );
-
     if (!confirmar) return;
 
     await window.api.deleteEmpresa(empresaActual.id);
-
-    // Quitar de memoria
     empresasGlobal = empresasGlobal.filter(e => e.id !== empresaActual.id);
 
-    // Cerrar popup
     document.getElementById("popupEmpresaView").style.display = "none";
-
-    // Repintar inmediatamente
     pintarEmpresas(empresasGlobal);
 };
 
-
-
-
-
-
-
-// ========================================================
-// TRABAJADORES - variables globales
-// ========================================================
-let trabajadoresGlobal = [];
-let trabajadorIndex = null;
-let trabajadorActual = null;
-let empresasGlobalList = [];   // empresas para el select
-
-// ========================================================
-// Renderizar pantalla de TRABAJADORES
-// ========================================================
+// ======================
+// TRABAJADORES
+// ======================
 async function renderTrabajadores(main) {
-
     if (role !== "admin") {
         main.innerHTML = "<h1>Acceso denegado 🔒</h1>";
         return;
@@ -1013,26 +858,23 @@ async function renderTrabajadores(main) {
         <h1 class="title-page">Trabajadores 👷‍♂️</h1>
 
         <div class="trabajador-toolbar">
-            <input id="buscarTrabajador"
-                   class="empresa-search"
-                   type="text"
-                   placeholder="🔍 Buscar trabajador...">
-        </div>
-
-        <div class="empresa-actions">
             <button class="btn-primary add-empresa-btn" onclick="nuevoTrabajador()">
                 ➕ Añadir trabajador
             </button>
+
+            <input 
+                type="text"
+                id="buscarTrabajador"
+                class="empresa-search"
+                placeholder="🔎 Buscar trabajador..."
+            >
         </div>
 
-        <!-- OJO: id = trabajadorGrid -->
         <div id="trabajadorGrid" class="empresa-grid"></div>
     `;
 
-    // Pintar todos al inicio
     pintarTrabajadores(trabajadoresGlobal);
 
-    // Buscador por nombre de usuario
     document.getElementById("buscarTrabajador").oninput = (e) => {
         const q = e.target.value.toLowerCase();
         const filtrados = trabajadoresGlobal.filter(t =>
@@ -1042,11 +884,7 @@ async function renderTrabajadores(main) {
     };
 }
 
-// ========================================================
-// pintar lista de trabajadores (CARD VIEW)
-// ========================================================
 function pintarTrabajadores(lista) {
-
     const grid = document.getElementById("trabajadorGrid");
     if (!grid) return;
 
@@ -1056,8 +894,11 @@ function pintarTrabajadores(lista) {
     }
 
     grid.innerHTML = lista.map((t, index) => `
-        <div class="empresa-card-view trabajador-card-view" onclick="abrirTrabajador(${index})">
-            <div class="empresa-info trabajador-info">
+        <div class="trabajador-card-view" onclick="abrirTrabajador(${index})">
+            <div class="trabajador-avatar-container">
+                ${getAvatarHTML(t.imagen, t.username, "list")}
+            </div>
+            <div class="trabajador-info">
                 <h3>${t.username}</h3>
                 <p><b>Email:</b> ${t.email}</p>
                 <p><b>Empresa:</b> ${t.empresaNombre || "Sin asignar"}</p>
@@ -1066,12 +907,7 @@ function pintarTrabajadores(lista) {
     `).join("");
 }
 
-
-// ========================================================
-// abrir popup de vista de trabajador
-// ========================================================
 function abrirTrabajador(index) {
-
     trabajadorIndex = index;
     trabajadorActual = trabajadoresGlobal[index];
 
@@ -1082,32 +918,29 @@ function abrirTrabajador(index) {
     document.getElementById("trViewEmpresa").textContent =
         empresa ? empresa.nombre : "Sin asignar";
 
-    document.getElementById("trViewImg").src =
-        trabajadorActual.imagen || "../assets/default_user.png";
+    document.getElementById("trViewImgContainer").innerHTML =
+        getAvatarHTML(trabajadorActual.imagen, trabajadorActual.username, "popup");
 
     document.getElementById("popupTrabajadorView").style.display = "flex";
 }
 
-
-
-// ========================================================
-// Nuevo trabajador (abrir popup limpio)
-// ========================================================
 function nuevoTrabajador() {
     trabajadorIndex = null;
     trabajadorActual = null;
 
+    document.getElementById("popupTrabajadorTitulo").textContent = "Nuevo trabajador";
+
     limpiarPopupTrabajador();
     cargarEmpresasEnSelect();
+
+    // VACÍA la imagen también
+    document.getElementById("trImagen").value = "";
 
     document.getElementById("popupTrabajador").style.display = "flex";
 }
 
-// =======================================================
-// Guardar trabajador (CREAR o EDITAR)
-// ========================================================
-document.getElementById("guardarTrabajadorPopup").onclick = async () => {
 
+document.getElementById("guardarTrabajadorPopup").onclick = async () => {
     const nombre = document.getElementById("trNombre").value.trim();
     const email = document.getElementById("trEmail").value.trim();
     const empresa_id = document.getElementById("trEmpresaSelect").value || null;
@@ -1118,8 +951,9 @@ document.getElementById("guardarTrabajadorPopup").onclick = async () => {
         return;
     }
 
-    // Imagen (si hay archivo)
-    let imagen = trabajadorIndex !== null ? trabajadoresGlobal[trabajadorIndex].imagen : null;
+    let imagen = trabajadorIndex !== null
+        ? trabajadoresGlobal[trabajadorIndex].imagen
+        : null;
 
     if (imgInput.files.length > 0) {
         imagen = await fileToBase64(imgInput.files[0]);
@@ -1128,7 +962,6 @@ document.getElementById("guardarTrabajadorPopup").onclick = async () => {
     const esEdicion = trabajadorIndex !== null;
 
     if (esEdicion) {
-
         await window.api.updateTrabajador({
             id: trabajadoresGlobal[trabajadorIndex].id,
             username: nombre,
@@ -1136,9 +969,7 @@ document.getElementById("guardarTrabajadorPopup").onclick = async () => {
             empresa_id,
             imagen
         });
-
     } else {
-
         await window.api.addTrabajador({
             username: nombre,
             email,
@@ -1152,10 +983,6 @@ document.getElementById("guardarTrabajadorPopup").onclick = async () => {
     renderTrabajadores(document.getElementById("mainContent"));
 };
 
-
-// ========================================================
-// Rellenar select de empresas en popup trabajador
-// ========================================================
 function cargarEmpresasEnSelect() {
     const sel = document.getElementById("trEmpresaSelect");
     if (!sel) return;
@@ -1165,11 +992,7 @@ function cargarEmpresasEnSelect() {
     ).join("");
 }
 
-// ========================================================
-// Borrar trabajador desde el popup de vista
-// ========================================================
 document.getElementById("borrarTrabajadorPreview").onclick = async () => {
-
     if (!trabajadorActual) return;
 
     if (!confirm("¿Eliminar este trabajador?")) return;
@@ -1182,17 +1005,13 @@ document.getElementById("borrarTrabajadorPreview").onclick = async () => {
     pintarTrabajadores(trabajadoresGlobal);
 };
 
-// ========================================================
-// LIMPIAR POPUP DE TRABAJADOR
-// ========================================================
 function limpiarPopupTrabajador() {
     document.getElementById("trNombre").value = "";
     document.getElementById("trEmail").value = "";
-    document.getElementById("trEmpresaSelect").value = "";
+    const sel = document.getElementById("trEmpresaSelect");
+    if (sel) sel.value = "";
 }
 
-
-// Cerrar popup de vista de trabajador
 const cerrarTrabajadorViewBtn =
     document.getElementById("trabajadorViewClose") ||
     document.getElementById("trViewClose");
@@ -1203,8 +1022,6 @@ if (cerrarTrabajadorViewBtn) {
     };
 }
 
-
-// Cancelar popup de edición de trabajador
 const cancelarTrabajadorBtn = document.getElementById("cancelarTrabajadorPopup");
 if (cancelarTrabajadorBtn) {
     cancelarTrabajadorBtn.onclick = () => {
@@ -1213,19 +1030,13 @@ if (cancelarTrabajadorBtn) {
     };
 }
 
-
-
-// Editar trabajador desde el popup de vista
 document.getElementById("trEditarBtn").onclick = () => {
-
     if (!trabajadorActual) return;
 
-    // Encontrar índice REAL en trabajadoresGlobal
     trabajadorIndex = trabajadoresGlobal.findIndex(
         t => t.id === trabajadorActual.id
     );
 
-    // Rellenar los inputs del popup de edición
     document.getElementById("trNombre").value = trabajadorActual.username;
     document.getElementById("trEmail").value = trabajadorActual.email;
 
@@ -1235,71 +1046,245 @@ document.getElementById("trEditarBtn").onclick = () => {
         document.getElementById("trEmpresaSelect").value = trabajadorActual.empresa_id;
     }
 
-    // Cerrar vista previa
     document.getElementById("popupTrabajadorView").style.display = "none";
-
-    // Abrir popup de edición
     document.getElementById("popupTrabajadorTitulo").textContent = "Editar trabajador";
     document.getElementById("popupTrabajador").style.display = "flex";
 };
 
+// ======================
+// INICIO (HOME)
+// ======================
+function cargarInicioAdmin() {
+    const main = document.getElementById("mainContent");
 
+    main.innerHTML = `
+        <h1>Panel de Administración 👑</h1>
 
+        <!-- GRID KPI -->
+        <div class="dashboard-grid">
 
+          <div class="dash-card">
+            <h3>🏢 Empresas</h3>
+            <p id="dashEmpresas">0</p>
+          </div>
 
+          <div class="dash-card">
+            <h3>👥 Trabajadores</h3>
+            <p id="dashTrabajadores">0</p>
+          </div>
 
+          <div class="dash-card">
+            <h3>👤 Clientes</h3>
+            <p id="dashClientes">0</p>
+          </div>
 
+          <div class="dash-card">
+            <h3>📝 Citas hoy</h3>
+            <p id="dashCitasHoy">0</p>
+          </div>
 
+        </div>
 
+        <!-- GRAFICA SEMANAL -->
+        <div class="panel-box">
+            <h2>📈 Citas en los últimos 7 días</h2>
+            <canvas id="graficaSemanal"></canvas>
+        </div>
 
+        <!-- ALERTAS  -->
+        <div class="alert-box">
+            <h2>🚨 Alertas importantes</h2>
+            <ul id="alertasLista"></ul>
+        </div>
 
+        <!-- ACTIVIDAD RECIENTE -->
+        <div class="panel-box">
+            <h2>📰 Actividad Reciente</h2>
+            <div id="actividadReciente"></div>
+        </div>
+    `;
 
+    cargarDashboard();
+}
 
+function cargarInicioBasico() {
+    const main = document.getElementById("mainContent");
 
-function openEditPopupFromAdmin(c) {
-    isEditing = true;
-    editingEvent = null;
-    editingId = c.id;
+    main.innerHTML = `
+        <h1>Bienvenido 👋</h1>
+        <p>Selecciona una opción del menú para comenzar.</p>
+    `;
+}
 
-    popupFecha = c.fecha;
-    popupHora = c.hora;
-    document.getElementById("citaCliente").value = c.cliente;
-    document.getElementById("citaTelefono").value = c.telefono;
-    document.getElementById("citaNota").value = c.nota;
+async function cargarDashboard() {
 
-    document.getElementById("popupTitulo").textContent = "Editar cita";
-    document.getElementById("popupCita").style.display = "flex";
+    const empresas = await window.api.getEmpresas();
+    const trabajadores = await window.api.getTrabajadores();
+    const clientes = await window.api.getAllUsers();
+    const citas = await window.api.getCitas("ALL");
+
+    document.getElementById("dashEmpresas").textContent = empresas.length;
+    document.getElementById("dashTrabajadores").textContent = trabajadores.length;
+    document.getElementById("dashClientes").textContent =
+        clientes.filter(u => u.role === "cliente").length;
+
+    document.getElementById("dashCitasHoy").textContent =
+        citas.filter(c => c.fecha === new Date().toISOString().split("T")[0]).length;
+
+    // 🔥 cargar módulos extra
+    cargarGraficaSemanal();
+    cargarAlertas();
+    cargarActividadReciente();
 }
 
 
-// TOGGLE DEL SUBMENÚ ADMINISTRACIÓN AVANZADA
+
+async function cargarGraficaSemanal() {
+
+    const citas = await window.api.getCitas("ALL");
+
+    // Últimos 7 días
+    const fechas = [];
+    const cantidades = [];
+
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+
+        const fechaStr = d.toISOString().split("T")[0];
+
+        fechas.push(fechaStr);
+        cantidades.push(
+            citas.filter(c => c.fecha === fechaStr).length
+        );
+    }
+
+    new Chart(document.getElementById("graficaSemanal"), {
+        type: "line",
+        data: {
+            labels: fechas,
+            datasets: [{
+                label: "Citas",
+                data: cantidades,
+                borderWidth: 2,
+                fill: false,
+                tension: 0.3
+            }]
+        }
+    });
+}
+
+
+async function cargarAlertas() {
+    const lista = document.getElementById("alertasLista");
+    lista.innerHTML = "";
+
+    const empresas = await window.api.getEmpresas();
+    const trabajadores = await window.api.getTrabajadores();
+    const citas = await window.api.getCitas("ALL");
+
+    let alertas = [];
+
+    // 1️⃣ Trabajadores sin empresa
+    const trabajadoresSinEmpresa = trabajadores.filter(t => {
+        return (
+            t.empresa_id === null ||
+            t.empresa_id === undefined ||
+            t.empresa_id === "" ||
+            !empresas.some(emp => emp.id === t.empresa_id)
+        );
+    });
+
+    if (trabajadoresSinEmpresa.length > 0) {
+        alertas.push(`${trabajadoresSinEmpresa.length} trabajadores sin empresa asignada`);
+    }
+
+    // 2️⃣ Empresas sin trabajadores
+    empresas.forEach(emp => {
+        const cuenta = trabajadores.filter(t => t.empresa_id === emp.id).length;
+        if (cuenta === 0) {
+            alertas.push(`La empresa "${emp.nombre}" no tiene trabajadores.`);
+        }
+    });
+
+    // 3️⃣ Citas pasadas sin nota
+    const hoy = new Date().toISOString().split("T")[0];
+    const citasPasadasSinNota = citas.filter(c =>
+        c.fecha < hoy && (!c.nota || c.nota.trim() === "")
+    );
+
+    if (citasPasadasSinNota.length > 0) {
+        alertas.push(`${citasPasadasSinNota.length} citas pasadas no tienen nota añadida.`);
+    }
+
+
+    // --- SI NO HAY ALERTAS ---
+    if (alertas.length === 0) {
+        lista.innerHTML = `<p>No hay alertas importantes 🎉</p>`;
+        return;
+    }
+
+    // --- PINTAR ALERTAS ---
+    lista.innerHTML = alertas
+        .map(a => `<div class="alert-item">⚠️ ${a}</div>`)
+        .join("");
+}
+
+
+
+async function cargarActividadReciente() {
+
+    const citas = await window.api.getCitas("ALL");
+    const actividades = [];
+
+    citas.slice(-10).reverse().forEach(c => {
+        actividades.push({
+            texto: `📅 Cita creada por ${c.cliente} (${c.fecha} - ${c.hora})`,
+            fecha: c.fecha
+        });
+    });
+
+    const div = document.getElementById("actividadReciente");
+
+    div.innerHTML = actividades.map(a => `
+        <div class="item">
+            <div>${a.texto}</div>
+            <div class="fecha">${a.fecha}</div>
+        </div>
+    `).join("");
+}
+
+
+// ======================
+// SUBMENÚ ADMIN
+// ======================
 const adminToggleBtn = document.getElementById("adminToggleBtn");
 const adminSubmenu = document.getElementById("adminSubmenu");
 
-if (adminToggleBtn) {
+if (adminToggleBtn && adminSubmenu) {
     adminToggleBtn.addEventListener("click", () => {
         const visible = adminSubmenu.style.display === "flex";
-
         adminSubmenu.style.display = visible ? "none" : "flex";
-
         adminToggleBtn.textContent = visible
             ? "⚙️ Administración avanzada ▾"
             : "⚙️ Administración avanzada ▴";
     });
 }
 
-function toggleAdminMenu() {
-    const submenu = document.getElementById("submenuAdmin");
-    submenu.style.display = submenu.style.display === "flex" ? "none" : "flex";
-}
-
-
-
-
-// ========================================================
+// ======================
 // LOGOUT
-// ========================================================
+// ======================
 function logout() {
     localStorage.clear();
     window.location.href = "../index.html";
+}
+window.logout = logout; // por si acaso
+
+// ======================
+// CARGA INICIAL
+// ======================
+if (role === "admin") {
+    cargarInicioAdmin();
+} else {
+    cargarInicioBasico();
 }

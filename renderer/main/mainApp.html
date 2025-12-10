@@ -5,70 +5,73 @@
   <meta charset="UTF-8">
   <title>TimeLink - Panel</title>
 
-  <!-- FullCalendar -->
+  <!-- FullCalendar JS-->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css">
   <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
 
 
   <!-- CSS separado -->
   <link rel="stylesheet" href="../main/mainApp.css">
-</head>
 
+    <!-- chart JS -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+</head>
 <body>
 
   <!-- SIDEBAR -->
   <aside class="sidebar">
+    
     <div>
+      <!-- Info usuario -->
       <div class="user-info">
         <h2 id="userName">Usuario</h2>
         <p id="userEmail">correo@example.com</p>
       </div>
 
+      <!-- MENÚ PRINCIPAL -->
       <div class="menu">
+
         <button onclick="navigate('inicio')" id="btnInicio" class="active">🏠 Inicio</button>
         <button onclick="navigate('calendario')" id="btnCalendario">📅 Calendario</button>
         <button onclick="navigate('clientes')" id="btnClientes">👤 Clientes</button>
         <button onclick="navigate('citas')" id="btnCitas">📝 Citas</button>
         <button onclick="navigate('ajustes')" id="btnAjustes">⚙️ Ajustes</button>
+
+        <!-- Panel Admin visible SOLO trabajadores (como tenías) -->
         <button onclick="navigate('adminPanel')" id="adminPanelBtn" style="display:none;">
-          ⭐ Panel Admin
+            ⭐ Panel Admin
         </button>
-        <!-- 🟦 SUBMENÚ ADMINISTRACIÓN AVANZADA (solo admin) -->
-        <div id="submenuAdminContainer" style="display:none; margin-top:10px;">
 
-          <!-- Botón principal -->
-          <button class="menu-btn admin-toggle" id="adminToggleBtn">
-            ⚙️ Administración avanzada ▾
-          </button>
+        <!-- Submenú solo admin -->
+        <div id="submenuAdminContainer" style="display:none; margin-top:15px;">
 
-          <!-- Submenú -->
-          <div id="adminSubmenu" class="submenu-admin">
-
-            <button class="submenu-item" id="btnEmpresas" onclick="navigate('empresas')">
-              🏢 Empresas
+            <button class="menu-btn admin-toggle" id="adminToggleBtn">
+                ⚙️ Administración avanzada ▾
             </button>
 
-            <button class="submenu-item" id="btnTrabajadores" onclick="navigate('trabajadores')">
-              👥 Trabajadores
-            </button>
-
-          </div>
+            <div id="adminSubmenu" class="submenu-admin">
+                <button class="submenu-item" onclick="navigate('empresas')" id="btnEmpresas">🏢 Empresas</button>
+                <button class="submenu-item" onclick="navigate('trabajadores')" id="btnTrabajadores">👥 Trabajadores</button>
+            </div>
 
         </div>
 
+      </div> <!-- FIN MENU -->
 
-      </div>
     </div>
 
+    <!-- LOGOUT -->
     <div class="menu">
-      <button onclick="logout()">🚪 Cerrar Sesión</button>
+        <button onclick="logout()">🚪 Cerrar Sesión</button>
     </div>
+
   </aside>
 
-  <!-- CONTENIDO -->
+  <!-- MAIN CONTENT -->
   <div class="main" id="mainContent">
-    <h1>Bienvenido 👋</h1>
-    <p>Aquí irá el contenido dinámico.</p>
+      <h1>Bienvenido 👋</h1>
+      <p>Aquí irá el contenido dinámico.</p>
   </div>
 
   <!-- POPUP CITAS -->
@@ -93,105 +96,95 @@
   </div>
 
   <!-- POPUP EMPRESA -->
-<div id="popupEmpresa" class="popup-overlay" style="display:none;">
-  <div class="popup-card empresa-card-popup">
-    <h2>Nueva Empresa 🏢</h2>
+  <div id="popupEmpresa" class="popup-overlay" style="display:none;">
+    <div class="popup-card empresa-card-popup">
+      <h2>Nueva EMPRESA</h2>
 
-    <label>Nombre de la empresa:</label>
-    <input id="empNombre" type="text" placeholder="Ej: Barbería El Corte">
+      <label>Nombre de la empresa:</label>
+      <input id="empNombre" type="text" placeholder="Ej: Barbería El Corte">
 
-    <label>Dirección:</label>
-    <input id="empDireccion" type="text" placeholder="Dirección (opcional)">
+      <label>Dirección:</label>
+      <input id="empDireccion" type="text" placeholder="Dirección (opcional)">
 
-    <label>Teléfono:</label>
-    <input id="empTelefono" type="text" placeholder="Teléfono (opcional)">
+      <label>Teléfono:</label>
+      <input id="empTelefono" type="text" placeholder="Teléfono (opcional)">
 
-    <label>Imagen de empresa:</label>
-    <input id="empImagen" type="file" accept="image/*">
+      <label>Imagen de empresa:</label>
+      <input id="empImagen" type="file" accept="image/*">
 
-    <div class="popup-actions">
-      <button id="cancelarEmpresaPopup">Cancelar</button>
-      <button id="guardarEmpresaPopup">Guardar</button>
+      <div class="popup-actions">
+        <button id="cancelarEmpresaPopup">Cancelar</button>
+        <button id="guardarEmpresaPopup">Guardar</button>
+      </div>
     </div>
   </div>
-</div>
 
-<!-- POPUP VISUALIZAR EMPRESA -->
-<div id="popupEmpresaView" class="popup-overlay">
-  <div class="popup-card empresa-view-card">
+  <!-- POPUP VISUALIZAR EMPRESA -->
+  <div id="popupEmpresaView" class="popup-overlay">
+    <div class="popup-card empresa-view-card">
 
-    <button id="empresaViewClose" class="close-btn"> x </button>
+      <button id="empresaViewClose" class="close-btn"> x </button>
 
-    <img id="empresaViewImg" class="empresa-view-img">
+      <img id="empresaViewImg" class="empresa-view-img"><br>
 
-    <h2 id="empresaViewNombre"></h2>
-    <p id="empresaViewDireccion"></p>
-    <p id="empresaViewTelefono"></p>
+      <h2 id="empresaViewNombre"></h2>
+      <p id="empresaViewDireccion"></p>
+      <p id="empresaViewTelefono"></p>
 
-    <div class="view-navigation">
-        <button id="empresaPrevBtn"> ⟵ </button>
-        <button id="empresaNextBtn"> ⟶ </button>
+      <br>
+
+      <button id="empresaEditBtn" class="btn-primary">Editar empresa</button>
+      <button id="borrarEmpresaPreview" class="btn-danger">Eliminar</button>
+
+
     </div>
-
-    
-    <button id="empresaEditBtn" class="btn-primary">Editar empresa</button>
-    <button id="borrarEmpresaPreview" class="btn-danger">Eliminar</button>
-
-
   </div>
-</div>
 
-<!-- POPUP CREAR / EDITAR TRABAJADOR -->
-<div id="popupTrabajador" class="popup-overlay">
-  <div class="popup-card empresa-edit-card">
+  <!-- POPUP CREAR / EDITAR TRABAJADOR -->
+  <div id="popupTrabajador" class="popup-overlay">
+    <div class="popup-card empresa-edit-card">
 
-    <h2 id="popupTrabajadorTitulo">Nuevo trabajador</h2>
+      <h2 id="popupTrabajadorTitulo">Nuevo TRABAJADOR</h2>
 
-    <label>Foto de perfil:</label>
-    <input id="trImagen" type="file" accept="image/*">
+      <label>Foto de perfil:</label>
+      <input id="trImagen" type="file" accept="image/*">
 
-    <label>Nombre:</label>
-    <input id="trNombre" type="text" placeholder="Nombre del trabajador">
+      <label>Nombre:</label>
+      <input id="trNombre" type="text" placeholder="Nombre del trabajador">
 
-    <label>Email:</label>
-    <input id="trEmail" type="email" placeholder="Email del trabajador">
+      <label>Email:</label>
+      <input id="trEmail" type="email" placeholder="Email del trabajador">
 
-    <label>Empresa asignada:</label>
-    <select id="trEmpresaSelect"></select>
+      <label>Empresa asignada:</label>
+      <select id="trEmpresaSelect"></select>
 
-    <div class="popup-actions">
-      <button id="cancelarTrabajadorPopup" class="btn-secondary">Cancelar</button>
-      <button id="guardarTrabajadorPopup" class="btn-primary">Guardar</button>
+      <div class="popup-actions">
+        <button id="cancelarTrabajadorPopup" class="btn-secondary">Cancelar</button>
+        <button id="guardarTrabajadorPopup" class="btn-primary">Guardar</button>
+      </div>
+
     </div>
-
   </div>
-</div>
 
-<!-- POPUP VISUALIZAR TRABAJADOR -->
-<div id="popupTrabajadorView" class="popup-overlay">
-  <div class="popup-card empresa-view-card">
+  <!-- POPUP VISUALIZAR TRABAJADOR -->
+  <div id="popupTrabajadorView" class="popup-overlay">
+    <div class="popup-card empresa-view-card">
 
-<button id="trViewClose" class="close-btn">✖</button>
+      <button id="trViewClose" class="close-btn">✖</button>
 
-    <img id="trViewImg" class="trabajador-view-img">
-<h2 id="trViewNombre"></h2>
-<p id="trViewEmail"></p>
-<p id="trViewEmpresa"></p>
+    <div id="trViewImgContainer"></div>
 
-    <div class="view-navigation">
-      <button id="trabajadorPrevBtn">⟵</button>
-      <button id="trabajadorNextBtn">⟶</button>
+      <h2 id="trViewNombre"></h2>
+      <p id="trViewEmail"></p>
+      <p id="trViewEmpresa"></p>
+      
+      <br>
+
+      <button id="trEditarBtn" class="btn-primary">Editar trabajador</button>
+      <button id="borrarTrabajadorPreview" class="btn-danger">Eliminar</button>
+
     </div>
-
-    <button id="trEditarBtn" class="btn-primary">Editar trabajador</button>
-    <button id="borrarTrabajadorPreview" class="btn-danger">Eliminar</button>
-
   </div>
-</div>
-
-
-
-
 
   <!-- JS separado -->
   <script defer src="../main/renderer1.js"></script>

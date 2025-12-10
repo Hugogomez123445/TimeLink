@@ -269,19 +269,33 @@ ipcMain.handle("save-image", async (evt, { fileName, data }) => {
 
 ipcMain.handle("get-trabajadores", () => {
   return new Promise((resolve, reject) => {
-    db.all("SELECT * FROM users WHERE role='trabajador'", (err, rows) => {
-      if (err) reject(err);
-      else resolve(rows);
-    });
+    db.all(
+      `SELECT 
+          users.id,
+          users.username,
+          users.email,
+          users.imagen,
+          users.empresa_id,
+          (SELECT nombre FROM empresas WHERE empresas.id = users.empresa_id) AS empresaNombre
+        FROM users 
+        WHERE role='trabajador'
+      `,
+      [],
+      (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows);
+      }
+    );
   });
 });
+
 
 ipcMain.handle("add-trabajador", (e, data) => {
   return new Promise((resolve, reject) => {
     db.run(
-      `INSERT INTO users (username, email, password, role, empresa_id)
-       VALUES (?, ?, ?, 'trabajador', ?)`,
-      [data.username, data.email, data.password, data.empresa_id],
+      `INSERT INTO users (username, email, password, role, empresa_id, imagen)
+       VALUES (?, ?, ?, 'trabajador', ?, ?)`,
+      [data.username, data.email, data.password, data.empresa_id, data.imagen],
       function (err) {
         if (err) reject(err);
         else resolve({ id: this.lastID });
@@ -290,13 +304,14 @@ ipcMain.handle("add-trabajador", (e, data) => {
   });
 });
 
+
 ipcMain.handle("update-trabajador", (e, data) => {
   return new Promise((resolve, reject) => {
     db.run(
       `UPDATE users 
-       SET username=?, email=?, empresa_id=? 
+       SET username=?, email=?, empresa_id=?, imagen=?
        WHERE id=?`,
-      [data.username, data.email, data.empresa_id, data.id],
+      [data.username, data.email, data.empresa_id, data.imagen, data.id],
       function (err) {
         if (err) reject(err);
         else resolve(true);
@@ -304,6 +319,7 @@ ipcMain.handle("update-trabajador", (e, data) => {
     );
   });
 });
+
 
 ipcMain.handle("delete-trabajador", (e, id) => {
   return new Promise((resolve, reject) => {
