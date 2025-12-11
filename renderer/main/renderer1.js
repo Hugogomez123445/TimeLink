@@ -98,6 +98,22 @@ function getAvatarHTML(imagen, nombre, tipo = "card") {
         : `<div class="trabajador-avatar-inicial">${inicial}</div>`;
 }
 
+// === AVATAR DEL SIDEBAR ===
+function loadSidebarAvatar() {
+    const cont = document.getElementById("sidebarAvatar");
+    const imagen = localStorage.getItem("imagen") || null;
+    const inicial = (username?.charAt(0) || "?").toUpperCase();
+
+    if (imagen) {
+        cont.innerHTML = `<img src="${imagen}" />`;
+    } else {
+        cont.textContent = inicial;
+    }
+}
+
+loadSidebarAvatar();
+
+
 function fileToBase64(file) {
     return new Promise((resolve) => {
         const reader = new FileReader();
