@@ -60,92 +60,81 @@ ipcMain.handle("register-user", (event, { username, email, password }) => {
 // ======================
 // CITAS
 // ======================
-
-// Obtener citas
-ipcMain.handle("get-citas", (event, userId) => {
+ipcMain.handle("get-citas", async () => {
   return new Promise((resolve, reject) => {
-    // Admin ve todo
-    if (userId === "ALL") {
-      db.all("SELECT * FROM citas", [], (err, rows) => {
-        if (err) reject(err);
-        else resolve(rows);
-      });
-    } else {
-      // Cliente solo sus citas
-      db.all(
-        "SELECT * FROM citas WHERE userId = ?",
-        [userId],
-        (err, rows) => {
-          if (err) reject(err);
-          else resolve(rows);
-        }
-      );
-    }
-  });
-});
-
-// Añadir cita
-ipcMain.handle("add-cita", (event, data) => {
-  return new Promise((resolve, reject) => {
-    db.run(
-      `
-      INSERT INTO citas 
-      (fecha, hora, cliente, telefono, nota, estado, userId, username)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `,
-      [
-        data.fecha,
-        data.hora,
-        data.cliente,
-        data.telefono,
-        data.nota,
-        data.estado,
-        data.userId,
-        data.username,
-      ],
-      function (err) {
-        if (err) reject(err);
-        else resolve({ success: true, id: this.lastID });
-      }
-    );
-  });
-});
-
-// Editar cita
-ipcMain.handle("update-cita", (event, data) => {
-  return new Promise((resolve, reject) => {
-    db.run(
-      `
-      UPDATE citas SET
-      fecha = ?, hora = ?, cliente = ?, telefono = ?, nota = ?, estado = ?
-      WHERE id = ?
-    `,
-      [
-        data.fecha,
-        data.hora,
-        data.cliente,
-        data.telefono,
-        data.nota,
-        data.estado,
-        data.id,
-      ],
-      function (err) {
-        if (err) reject(err);
-        else resolve({ success: true });
-      }
-    );
-  });
-});
-
-// Eliminar cita
-ipcMain.handle("delete-cita", (event, id) => {
-  return new Promise((resolve, reject) => {
-    db.run("DELETE FROM citas WHERE id = ?", [id], function (err) {
-      if (err) reject(err);
-      else resolve({ success: true });
+    const sql = `
+      SELECT 
+        c.id,
+        c.fecha,
+        c.hora,
+        c.estado,
+        c.nota,
+        c.empresa_id,
+        c.trabajador_id,
+        cl.nombre AS cliente,
+        cl.telefono AS telefono
+      FROM citas c
+      LEFT JOIN clientes cl ON cl.id = c.cliente_id
+      ORDER BY c.fecha ASC, c.hora ASC
+    `;
+    db.all(sql, [], (err, rows) => {
+      if (err) return reject(err);
+      resolve(rows || []);
     });
   });
 });
+
+ipcMain.handle("add-cita", async (event, payload) => {
+  const { fecha, hora, cliente, telefono = "", nota = "", empresa_id = null, trabajador_id = null } = payload;
+
+  return new Promise((resolve, reject) => {
+    // 1) Buscar cliente (por empresa + nombre + telefono)
+    const findClient = `
+      SELECT id FROM clientes 
+      WHERE empresa_id = ? AND nombre = ? AND IFNULL(telefono,'') = IFNULL(?, '')
+      LIMIT 1
+    `;
+
+    db.get(findClient, [empresa_id, cliente, telefono], (err, row) => {
+      if (err) return reject(err);
+
+      const insertCita = (cliente_id) => {
+        const insert = `
+          INSERT INTO citas (empresa_id, trabajador_id, cliente_id, fecha, hora, duracion_min, estado, nota)
+          VALUES (?, ?, ?, ?, ?, 30, 'reservado', ?)
+        `;
+        db.run(insert, [empresa_id, trabajador_id, cliente_id, fecha, hora, nota], function (e2) {
+          if (e2) return reject(e2);
+          resolve({ success: true, id: this.lastID });
+        });
+      };
+
+      if (row?.id) {
+        insertCita(row.id);
+      } else {
+        // 2) Crear cliente
+        const createClient = `
+          INSERT INTO clientes (empresa_id, nombre, telefono)
+          VALUES (?, ?, ?)
+        `;
+        db.run(createClient, [empresa_id, cliente, telefono], function (e3) {
+          if (e3) return reject(e3);
+          insertCita(this.lastID);
+        });
+      }
+    });
+  });
+});
+
+ipcMain.handle("delete-cita", async (event, citaId) => {
+  return new Promise((resolve, reject) => {
+    db.run(`DELETE FROM citas WHERE id = ?`, [citaId], function (err) {
+      if (err) return reject(err);
+      resolve({ success: true, changes: this.changes });
+    });
+  });
+});
+
 
 // ======================
 // ADMIN: USUARIOS

@@ -122,6 +122,10 @@ function fileToBase64(file) {
     });
 }
 
+const empresaId = localStorage.getItem("seleccion_empresa");
+const trabajadorIdSel = localStorage.getItem("seleccion_trabajador");
+
+
 // ======================
 // NAVEGACIÓN PRINCIPAL
 // ======================
@@ -158,7 +162,7 @@ function navigate(section) {
             break;
 
         case "calendario":
-            renderCalendario(main);
+            seleccionarEmpresa(main);
             break;
 
         case "clientes":
@@ -199,214 +203,321 @@ function navigate(section) {
 window.navigate = navigate;
 
 // ======================
-// CALENDARIO
+// CALENDARIO (PRO)
 // ======================
-async function renderCalendario(main) {
-    main.innerHTML = `
-        <h1>Calendario 📅</h1>
-        <div id="calendar" style="margin-top:20px;"></div>
 
-        <div id="hourPanel" class="hour-panel" style="display:none;">
-            <h3>Selecciona una hora:</h3>
-            <div id="hourList" class="hour-list"></div>
+// Helpers que te faltaban (evita errores)
+function getSelectedEmpresaId() {
+  return localStorage.getItem("seleccion_empresa");
+}
+function getSelectedTrabajadorId() {
+  return localStorage.getItem("seleccion_trabajador");
+}
+
+async function seleccionarEmpresa(main) {
+  const empresas = await window.api.getEmpresas();
+
+  main.innerHTML = `
+    <h1>Selecciona una empresa 🏢</h1>
+    <div class="empresa-grid">
+      ${empresas.map(e => `
+        <div class="empresa-card-view" onclick="seleccionarTrabajador(${e.id})">
+          <img src="${e.imagen || '../assets/default_company.png'}" class="empresa-img">
+          <div class="empresa-info">
+            <h3>${e.nombre}</h3>
+            <p>${e.direccion || 'Sin dirección'}</p>
+          </div>
         </div>
-    `;
-
-    setTimeout(async () => {
-        const hourPanel = document.getElementById("hourPanel");
-        const hourList = document.getElementById("hourList");
-        const calendarEl = document.getElementById("calendar");
-
-        calendar = new FullCalendar.Calendar(calendarEl, {
-            initialView: "dayGridMonth",
-            locale: "es",
-            firstDay: 1,
-            height: "auto",
-            selectable: true,
-            headerToolbar: {
-                left: "prev,next today",
-                center: "title",
-                right: "dayGridMonth,timeGridWeek,timeGridDay",
-            },
-            dateClick(info) {
-                hourPanel.style.display = "none";
-                generateHours(info.dateStr);
-            },
-            eventClick(info) {
-                const ev = info.event;
-                const evUserId = ev.extendedProps.userId;
-
-                if (role !== "admin" && String(evUserId) !== String(userId)) {
-                    alert("No puedes modificar citas de otros clientes.");
-                    return;
-                }
-
-                const editar = confirm("Aceptar = Editar la cita\nCancelar = Eliminar la cita");
-
-                if (editar) openEditPopup(ev);
-                else deleteEvent(ev);
-            }
-        });
-
-        calendar.render();
-
-        const citas = await window.api.getCitas("ALL");
-        citas.forEach(c => addCitaToCalendar(c));
-
-        function generateHours(dateStr) {
-            hourList.innerHTML = "";
-            hourPanel.style.display = "block";
-
-            const occupied = calendar.getEvents()
-                .filter(ev => ev.start.toISOString().split("T")[0] === dateStr)
-                .map(ev => ev.start.toTimeString().slice(0, 5));
-
-            for (let min = 9 * 60; min <= 18 * 60; min += 30) {
-                const h = String(Math.floor(min / 60)).padStart(2, "0");
-                const m = String(min % 60).padStart(2, "0");
-                const hourText = `${h}:${m}`;
-
-                const btn = document.createElement("button");
-                btn.className = "hour-btn";
-                btn.textContent = hourText;
-
-                if (occupied.includes(hourText)) {
-                    btn.classList.add("busy");
-                    btn.disabled = true;
-                } else {
-                    btn.classList.add("free");
-                    btn.onclick = () => openNewCitaPopup(dateStr, hourText);
-                }
-
-                hourList.appendChild(btn);
-            }
-        }
-
-        function openNewCitaPopup(date, hour) {
-            isEditing = false;
-            editingEvent = null;
-            editingId = null;
-
-            popupFecha = date;
-            popupHora = hour;
-
-            document.getElementById("citaCliente").value = username;
-            document.getElementById("citaTelefono").value = "";
-            document.getElementById("citaNota").value = "";
-            document.getElementById("popupTitulo").textContent = "Nueva cita";
-
-            document.getElementById("popupCita").style.display = "flex";
-        }
-
-        function openEditPopup(ev) {
-            isEditing = true;
-            editingEvent = ev;
-            editingId = ev.extendedProps.id;
-
-            const ext = ev.extendedProps;
-
-            popupFecha = ev.start.toISOString().split("T")[0];
-            popupHora = ev.start.toTimeString().slice(0, 5);
-
-            document.getElementById("citaCliente").value = ext.cliente || ev.title;
-            document.getElementById("citaTelefono").value = ext.telefono || "";
-            document.getElementById("citaNota").value = ext.nota || "";
-
-            document.getElementById("popupTitulo").textContent = "Editar cita";
-            document.getElementById("popupCita").style.display = "flex";
-        }
-
-        async function deleteEvent(ev) {
-            if (confirm("¿Eliminar esta cita?")) {
-                await window.api.deleteCita(ev.extendedProps.id);
-                ev.remove();
-            }
-        }
-    }, 50);
+      `).join("")}
+    </div>
+  `;
 }
 
-function addCitaToCalendar(c) {
-    if (!calendar) return;
+async function seleccionarTrabajador(empresaId) {
+  const main = document.getElementById("mainContent");
 
-    const esPropia = String(c.userId) === String(userId);
+  const trabajadores = await window.api.getTrabajadores();
+  const lista = trabajadores.filter(t => t.empresa_id == empresaId);
 
-    calendar.addEvent({
-        title: role === "admin"
-            ? `${c.cliente} (${c.username})`
-            : esPropia ? c.cliente : "Ocupado",
-        start: `${c.fecha}T${c.hora}`,
-        backgroundColor: esPropia ? "#2563eb" : "#dc2626",
-        borderColor: esPropia ? "#2563eb" : "#dc2626",
-        extendedProps: {
-            id: c.id,
-            cliente: c.cliente,
-            telefono: c.telefono,
-            nota: c.nota,
-            username: c.username,
-            userId: c.userId
-        }
+  main.innerHTML = `
+    <h1>Selecciona un trabajador 👷‍♂️</h1>
+    <div class="empresa-grid">
+      ${lista.map(t => `
+        <div class="trabajador-card-view" onclick="abrirCalendarioTrabajador(${t.id}, ${empresaId})">
+          <div class="trabajador-avatar-container">
+            ${getAvatarHTML(t.imagen, t.username)}
+          </div>
+          <div class="trabajador-info">
+            <h3>${t.username}</h3>
+            <p>${t.email}</p>
+          </div>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+function abrirCalendarioTrabajador(trabajadorId, empresaId) {
+  localStorage.setItem("seleccion_trabajador", trabajadorId);
+  localStorage.setItem("seleccion_empresa", empresaId);
+
+  const main = document.getElementById("mainContent");
+  renderCalendario(main);
+}
+
+async function renderCalendario(main) {
+  main.innerHTML = `
+    <h1>Calendario 📅</h1>
+    <div id="calendar" style="margin-top:20px;"></div>
+
+    <div id="hourPanel" class="hour-panel" style="display:none;">
+      <h3>Selecciona una hora:</h3>
+      <div id="hourList" class="hour-list"></div>
+    </div>
+  `;
+
+  setTimeout(async () => {
+    const hourPanel = document.getElementById("hourPanel");
+    const hourList = document.getElementById("hourList");
+    const calendarEl = document.getElementById("calendar");
+
+    const empresaId = getSelectedEmpresaId();
+    const trabajadorIdSel = getSelectedTrabajadorId();
+
+    // --- calendario ---
+    calendar = new FullCalendar.Calendar(calendarEl, {
+      initialView: "dayGridMonth",
+      locale: "es",
+      firstDay: 1,
+      height: "auto",
+      selectable: true,
+      headerToolbar: {
+        left: "prev,next today",
+        center: "title",
+        right: "dayGridMonth,timeGridWeek,timeGridDay",
+      },
+
+      dateClick(info) {
+        // al cambiar de día, regeneramos horas
+        generateHours(info.dateStr);
+      },
+
+      eventClick(info) {
+        const ev = info.event;
+
+        const editar = confirm("Aceptar = Editar\nCancelar = Eliminar");
+        if (editar) openEditPopup(ev);
+        else deleteEvent(ev);
+      }
     });
-}
 
-// Guardar / cancelar popup cita
-document.getElementById("cancelarPopup").onclick = () => {
-    document.getElementById("popupCita").style.display = "none";
-};
+    calendar.render();
 
-document.getElementById("guardarPopup").onclick = async () => {
-    const cliente = document.getElementById("citaCliente").value;
-    const telefono = document.getElementById("citaTelefono").value;
-    const nota = document.getElementById("citaNota").value;
+    // ✅ Cargar y pintar citas al abrir
+    await loadAndPaintCitas();
 
-    if (!cliente || !popupFecha || !popupHora) {
+    // =========================
+    // Cargar citas + pintar ROJO
+    // =========================
+    async function loadAndPaintCitas() {
+      const citas = await window.api.getCitas("ALL");
+
+      // ✅ Filtrar por trabajador + empresa (compatibilidad vieja/nueva)
+      const filtradas = citas.filter(c => {
+        const tId = c.trabajador_id ?? c.userId ?? c.trabajadorId;
+        const eId = c.empresa_id ?? c.empresaId;
+        const okTrab = String(tId) === String(trabajadorIdSel);
+        const okEmp  = empresaId ? String(eId) === String(empresaId) : true;
+        return okTrab && okEmp;
+      });
+
+      // ✅ limpiar eventos antes de repintar
+      calendar.removeAllEvents();
+
+      filtradas.forEach(c => addCitaToCalendar(c));
+    }
+
+    // =========================
+    // Generar horas verde/rojo
+    // =========================
+    function generateHours(dateStr) {
+      hourList.innerHTML = "";
+      hourPanel.style.display = "block";
+      hourPanel.dataset.date = dateStr;
+
+      // horas ocupadas (por eventos ya pintados)
+      const ocupadas = calendar.getEvents()
+        .filter(ev => ev.start.toISOString().split("T")[0] === dateStr)
+        .map(ev => ev.start.toTimeString().slice(0, 5));
+
+      for (let min = 9 * 60; min <= 18 * 60; min += 30) {
+        const h = String(Math.floor(min / 60)).padStart(2, "0");
+        const m = String(min % 60).padStart(2, "0");
+        const hora = `${h}:${m}`;
+
+        const btn = document.createElement("button");
+        btn.className = ocupadas.includes(hora) ? "hour-btn busy" : "hour-btn free";
+        btn.textContent = hora;
+
+        if (ocupadas.includes(hora)) {
+          // 🔴 ocupada: NO clickable
+          btn.disabled = true;
+        } else {
+          // 🟢 libre
+          btn.onclick = () => openNewCitaPopup(dateStr, hora);
+        }
+
+        hourList.appendChild(btn);
+      }
+    }
+
+    // --- NUEVA CITA ---
+    function openNewCitaPopup(date, hour) {
+      isEditing = false;
+      editingId = null;
+
+      popupFecha = date;
+      popupHora = hour;
+
+      document.getElementById("citaCliente").value = username;
+      document.getElementById("citaTelefono").value = "";
+      document.getElementById("citaNota").value = "";
+      document.getElementById("popupTitulo").textContent = "Nueva cita";
+
+      document.getElementById("popupCita").style.display = "flex";
+    }
+
+    // --- EDITAR CITA ---
+    function openEditPopup(ev) {
+      isEditing = true;
+      editingEvent = ev;
+      editingId = ev.extendedProps.id;
+
+      const ext = ev.extendedProps;
+
+      popupFecha = ev.start.toISOString().split("T")[0];
+      popupHora = ev.start.toTimeString().slice(0, 5);
+
+      document.getElementById("citaCliente").value = ext.cliente || "";
+      document.getElementById("citaTelefono").value = ext.telefono || "";
+      document.getElementById("citaNota").value = ext.nota || "";
+
+      document.getElementById("popupTitulo").textContent = "Editar cita";
+      document.getElementById("popupCita").style.display = "flex";
+    }
+
+    // --- ELIMINAR CITA ---
+    async function deleteEvent(ev) {
+      if (!confirm("¿Eliminar esta cita?")) return;
+
+      try {
+        await window.api.deleteCita(ev.extendedProps.id);
+      } catch (e) {
+        console.error("Error borrando cita:", e);
+      }
+
+      ev.remove();
+
+      // 🔥 refrescar panel de horas si está abierto
+      const d = hourPanel.dataset.date;
+      if (d) generateHours(d);
+    }
+
+    // =========================
+    // GUARDAR POPUP (sin duplicar, con constraint controlado)
+    // =========================
+    document.getElementById("guardarPopup").onclick = async () => {
+      const trabajadorId = getSelectedTrabajadorId();
+      const empresaId = getSelectedEmpresaId();
+
+      const cliente = document.getElementById("citaCliente").value.trim();
+      const telefono = document.getElementById("citaTelefono").value.trim();
+      const nota = document.getElementById("citaNota").value.trim();
+
+      if (!cliente || !popupFecha || !popupHora) {
         alert("Faltan datos.");
         return;
-    }
+      }
 
-    if (isEditing && editingId) {
-        await window.api.updateCita({
-            id: editingId,
-            fecha: popupFecha,
-            hora: popupHora,
-            cliente,
-            telefono,
-            nota,
-            estado: "reservado"
-        });
+      const payload = {
+        id: editingId || null,
+        fecha: popupFecha,
+        hora: popupHora,
+        cliente,
+        telefono,
+        nota,
+        estado: "reservado",
+        // compatibilidad vieja/nueva:
+        userId: trabajadorId,
+        trabajador_id: trabajadorId,
+        empresa_id: empresaId,
+        username
+      };
 
-        if (editingEvent) {
-            editingEvent.setStart(`${popupFecha}T${popupHora}:00`);
-            editingEvent.setProp("title", cliente);
-            editingEvent.setExtendedProp("cliente", cliente);
-            editingEvent.setExtendedProp("telefono", telefono);
-            editingEvent.setExtendedProp("nota", nota);
+      try {
+        if (isEditing && editingId) {
+          await window.api.updateCita(payload);
+        } else {
+          await window.api.addCita(payload);
         }
-    } else {
-        const nueva = await window.api.addCita({
-            fecha: popupFecha,
-            hora: popupHora,
-            cliente,
-            telefono,
-            nota,
-            estado: "reservado",
-            userId,
-            username
-        });
 
-        addCitaToCalendar({
-            id: nueva.id,
-            fecha: popupFecha,
-            hora: popupHora,
-            cliente,
-            telefono,
-            nota,
-            username,
-            userId
-        });
-    }
+        // ✅ Cerramos popup
+        document.getElementById("popupCita").style.display = "none";
 
-    document.getElementById("popupCita").style.display = "none";
-};
+        // ✅ recargar desde BD para que:
+        // - se pinte ROJO siempre
+        // - no haya duplicados
+        await loadAndPaintCitas();
+
+        // ✅ refrescar panel horas del día abierto (para que se vuelva rojo y disabled)
+        const d = hourPanel.dataset.date;
+        if (d) generateHours(d);
+
+      } catch (err) {
+        console.error("❌ Error guardando cita:", err);
+
+        // ✅ si está ocupada, avisar y refrescar para que salga roja
+        if (String(err?.message || "").includes("UNIQUE constraint failed")) {
+          alert("⚠️ Esa hora ya está reservada.");
+          await loadAndPaintCitas();
+          const d = hourPanel.dataset.date;
+          if (d) generateHours(d);
+          return;
+        }
+
+        alert("❌ No se pudo guardar la cita. Mira la consola (F12).");
+      }
+    };
+
+    document.getElementById("cancelarPopup").onclick = () => {
+      document.getElementById("popupCita").style.display = "none";
+    };
+
+  }, 50);
+}
+
+// =========================
+// Pintar cita en calendario (SIEMPRE ROJO)
+// =========================
+function addCitaToCalendar(c) {
+  if (!calendar) return;
+
+  const id = c.id ?? c.cita_id ?? c.citaId;
+
+  const start =
+    (c.hora && c.hora.length === 5)
+      ? `${c.fecha}T${c.hora}:00`
+      : `${c.fecha}T${c.hora}`;
+
+  calendar.addEvent({
+    title: c.cliente || "Reservado",
+    start,
+    backgroundColor: "#dc2626",
+    borderColor: "#dc2626",
+    extendedProps: { ...c, id }
+  });
+}
+
 
 // ======================
 // CLIENTES (solo admin / trabajador)
