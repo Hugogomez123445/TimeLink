@@ -140,6 +140,18 @@ db.serialize(async () => {
       ON citas(empresa_id, trabajador_id, fecha, hora)
     `);
 
+    db.all("PRAGMA table_info(citas)", (err, rows) => {
+  if (err) return;
+
+  const cols = rows.map(r => r.name);
+
+  if (!cols.includes("estado")) {
+    db.run("ALTER TABLE citas ADD COLUMN estado TEXT DEFAULT 'reservado'");
+    console.log("✔ estado añadido a citas");
+  }
+});
+
+
     console.log("✅ Base de datos conectada");
   } catch (e) {
     console.error("❌ Error inicializando BD:", e);

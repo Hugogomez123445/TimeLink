@@ -319,6 +319,17 @@ ipcMain.handle("delete-trabajador", (e, id) => {
   });
 });
 
+ipcMain.handle("set-cita-estado", async (event, { id, estado }) => {
+  return new Promise((resolve, reject) => {
+    const q = `UPDATE citas SET estado = ? WHERE id = ?`;
+    db.run(q, [estado, id], function (err) {
+      if (err) reject(err);
+      else resolve({ success: true, changes: this.changes });
+    });
+  });
+});
+
+
 
 // ======================
 // INICIAR APP
