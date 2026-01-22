@@ -319,12 +319,35 @@ ipcMain.handle("delete-trabajador", (e, id) => {
   });
 });
 
+
+
+// Buscar si existe una cita cancelada en ese hueco (para reusar y evitar UNIQUE)
+ipcMain.handle("find-cita-cancelada", async (event, { empresa_id, trabajador_id, fecha, hora }) => {
+  return new Promise((resolve, reject) => {
+    const q = `
+      SELECT id
+      FROM citas
+      WHERE empresa_id = ?
+        AND trabajador_id = ?
+        AND fecha = ?
+        AND hora = ?
+        AND estado = 'cancelada'
+      LIMIT 1
+    `;
+    db.get(q, [empresa_id, trabajador_id, fecha, hora], (err, row) => {
+      if (err) return reject(err);
+      resolve(row || null);
+    });
+  });
+});
+
+// Cambiar estado de cita
 ipcMain.handle("set-cita-estado", async (event, { id, estado }) => {
   return new Promise((resolve, reject) => {
     const q = `UPDATE citas SET estado = ? WHERE id = ?`;
     db.run(q, [estado, id], function (err) {
-      if (err) reject(err);
-      else resolve({ success: true, changes: this.changes });
+      if (err) return reject(err);
+      resolve({ success: true, changes: this.changes });
     });
   });
 });

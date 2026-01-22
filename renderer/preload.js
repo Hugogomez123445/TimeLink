@@ -37,7 +37,9 @@ contextBridge.exposeInMainWorld("api", {
   deleteTrabajador: (id) => ipcRenderer.invoke("delete-trabajador", id),
 
 
-  setCitaEstado: (payload) => ipcRenderer.invoke("set-cita-estado", payload),
+  findCitaCancelada: (data) => ipcRenderer.invoke("find-cita-cancelada", data),
+setCitaEstado: (data) => ipcRenderer.invoke("set-cita-estado", data),
+
 
 
 });

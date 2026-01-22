@@ -209,16 +209,16 @@ window.navigate = navigate;
 
 // Helpers que te faltaban (evita errores)
 function getSelectedEmpresaId() {
-  return localStorage.getItem("seleccion_empresa");
+    return localStorage.getItem("seleccion_empresa");
 }
 function getSelectedTrabajadorId() {
-  return localStorage.getItem("seleccion_trabajador");
+    return localStorage.getItem("seleccion_trabajador");
 }
 
 async function seleccionarEmpresa(main) {
-  const empresas = await window.api.getEmpresas();
+    const empresas = await window.api.getEmpresas();
 
-  main.innerHTML = `
+    main.innerHTML = `
     <h1>Selecciona una empresa 🏢</h1>
     <div class="empresa-grid">
       ${empresas.map(e => `
@@ -235,12 +235,12 @@ async function seleccionarEmpresa(main) {
 }
 
 async function seleccionarTrabajador(empresaId) {
-  const main = document.getElementById("mainContent");
+    const main = document.getElementById("mainContent");
 
-  const trabajadores = await window.api.getTrabajadores();
-  const lista = trabajadores.filter(t => t.empresa_id == empresaId);
+    const trabajadores = await window.api.getTrabajadores();
+    const lista = trabajadores.filter(t => t.empresa_id == empresaId);
 
-  main.innerHTML = `
+    main.innerHTML = `
     <h1>Selecciona un trabajador 👷‍♂️</h1>
     <div class="empresa-grid">
       ${lista.map(t => `
@@ -259,15 +259,15 @@ async function seleccionarTrabajador(empresaId) {
 }
 
 function abrirCalendarioTrabajador(trabajadorId, empresaId) {
-  localStorage.setItem("seleccion_trabajador", trabajadorId);
-  localStorage.setItem("seleccion_empresa", empresaId);
+    localStorage.setItem("seleccion_trabajador", trabajadorId);
+    localStorage.setItem("seleccion_empresa", empresaId);
 
-  const main = document.getElementById("mainContent");
-  renderCalendario(main);
+    const main = document.getElementById("mainContent");
+    renderCalendario(main);
 }
 
 async function renderCalendario(main) {
-  main.innerHTML = `
+    main.innerHTML = `
     <h1>Calendario 📅</h1>
     <div id="calendar" style="margin-top:20px;"></div>
 
@@ -277,283 +277,337 @@ async function renderCalendario(main) {
     </div>
   `;
 
-  setTimeout(async () => {
-    const hourPanel = document.getElementById("hourPanel");
-    const hourList = document.getElementById("hourList");
-    const calendarEl = document.getElementById("calendar");
+    setTimeout(async () => {
+        const hourPanel = document.getElementById("hourPanel");
+        const hourList = document.getElementById("hourList");
+        const calendarEl = document.getElementById("calendar");
 
-    const empresaId = getSelectedEmpresaId();
-    const trabajadorIdSel = getSelectedTrabajadorId();
+        const empresaId = getSelectedEmpresaId();
+        const trabajadorIdSel = getSelectedTrabajadorId();
 
-    // --- calendario ---
-    calendar = new FullCalendar.Calendar(calendarEl, {
-      initialView: "dayGridMonth",
-      locale: "es",
-      firstDay: 1,
-      height: "auto",
-      selectable: true,
-      headerToolbar: {
-        left: "prev,next today",
-        center: "title",
-        right: "dayGridMonth,timeGridWeek,timeGridDay",
-      },
+        // --- calendario ---
+        calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: "dayGridMonth",
+            locale: "es",
+            firstDay: 1,
+            height: "auto",
+            selectable: true,
+            headerToolbar: {
+                left: "prev,next today",
+                center: "title",
+                right: "dayGridMonth,timeGridWeek,timeGridDay",
+            },
 
-      dateClick(info) {
-        // al cambiar de día, regeneramos horas
-        generateHours(info.dateStr);
-      },
+            dateClick(info) {
+                // al cambiar de día, regeneramos horas
+                generateHours(info.dateStr);
+            },
 
-     eventClick: async (info) => {
-  const ev = info.event;
-  const id = ev.extendedProps.id;
+            eventClick: async (info) => {
+                const ev = info.event;
+                const id = ev.extendedProps.id;
 
-  const opcion = prompt(
-`¿Qué desea hacer?
+                const opcion = prompt(
+                    `¿Qué desea hacer?
 1 = Marcar como COMPLETADA
 2 = CANCELAR cita
 3 = EDITAR
 4 = BORRAR (definitivo)
 (Escriba 1/2/3/4)`
-  );
+                );
 
-  if (!opcion) return;
+                if (!opcion) return;
 
-  // COMPLETAR
-  if (opcion === "1") {
-    await window.api.setCitaEstado({ id, estado: "completada" });
-    const color = "#16a34a";
-    ev.setProp("backgroundColor", color);
-    ev.setProp("borderColor", color);
-    ev.setExtendedProp("estado", "completada");
-    return;
-  }
+                // helper: refrescar horas si el panel está abierto
+                const refreshHourPanel = () => {
+                    const hourPanel = document.getElementById("hourPanel");
+                    if (hourPanel && hourPanel.style.display === "block") {
+                        const dateStr = hourPanel.dataset.date;
+                        if (dateStr) generateHours(dateStr);
+                    }
+                };
 
-  // CANCELAR
-  if (opcion === "2") {
-    await window.api.setCitaEstado({ id, estado: "cancelada" });
-    const color = "#9ca3af";
-    ev.setProp("backgroundColor", color);
-    ev.setProp("borderColor", color);
-    ev.setExtendedProp("estado", "cancelada");
-    return;
-  }
+                // COMPLETAR
+                if (opcion === "1") {
+                    await window.api.setCitaEstado({ id, estado: "completada" });
+                    const color = "#16a34a";
+                    ev.setProp("backgroundColor", color);
+                    ev.setProp("borderColor", color);
+                    ev.setExtendedProp("estado", "completada");
+                    refreshHourPanel();
+                    return;
+                }
 
-  // EDITAR
-  if (opcion === "3") {
-    openEditPopup(ev);
-    return;
-  }
+                // CANCELAR
+                if (opcion === "2") {
+                    await window.api.setCitaEstado({ id, estado: "cancelada" });
+                    const color = "#9ca3af";
+                    ev.setProp("backgroundColor", color);
+                    ev.setProp("borderColor", color);
+                    ev.setExtendedProp("estado", "cancelada");
+                    refreshHourPanel(); // ✅ esto hace que vuelva verde
+                    return;
+                }
 
-  // BORRAR definitivo
-  if (opcion === "4") {
-    if (!confirm("¿Eliminar definitivamente esta cita?")) return;
-    await window.api.deleteCita(id);
-    ev.remove();
-    return;
-  }
-}
+                // EDITAR
+                if (opcion === "3") {
+                    openEditPopup(ev);
+                    return;
+                }
 
-    });
+                // BORRAR definitivo
+                if (opcion === "4") {
+                    if (!confirm("¿Eliminar definitivamente esta cita?")) return;
+                    await window.api.deleteCita(id);
+                    ev.remove();
+                    refreshHourPanel();
+                    return;
+                }
+            }
 
-    calendar.render();
 
-    // ✅ Cargar y pintar citas al abrir
-    await loadAndPaintCitas();
+        });
 
-    // =========================
-    // Cargar citas + pintar ROJO
-    // =========================
-    async function loadAndPaintCitas() {
-      const citas = await window.api.getCitas("ALL");
+        calendar.render();
 
-      // ✅ Filtrar por trabajador + empresa (compatibilidad vieja/nueva)
-      const filtradas = citas.filter(c => {
-        const tId = c.trabajador_id ?? c.userId ?? c.trabajadorId;
-        const eId = c.empresa_id ?? c.empresaId;
-        const okTrab = String(tId) === String(trabajadorIdSel);
-        const okEmp  = empresaId ? String(eId) === String(empresaId) : true;
-        return okTrab && okEmp;
-      });
-
-      // ✅ limpiar eventos antes de repintar
-      calendar.removeAllEvents();
-
-      filtradas.forEach(c => addCitaToCalendar(c));
-    }
-
-    // =========================
-    // Generar horas verde/rojo
-    // =========================
-    function generateHours(dateStr) {
-      hourList.innerHTML = "";
-      hourPanel.style.display = "block";
-      hourPanel.dataset.date = dateStr;
-
-      // horas ocupadas (por eventos ya pintados)
-      const ocupadas = calendar.getEvents()
-        .filter(ev => ev.start.toISOString().split("T")[0] === dateStr)
-        .map(ev => ev.start.toTimeString().slice(0, 5));
-
-      for (let min = 9 * 60; min <= 18 * 60; min += 30) {
-        const h = String(Math.floor(min / 60)).padStart(2, "0");
-        const m = String(min % 60).padStart(2, "0");
-        const hora = `${h}:${m}`;
-
-        const btn = document.createElement("button");
-        btn.className = ocupadas.includes(hora) ? "hour-btn busy" : "hour-btn free";
-        btn.textContent = hora;
-
-        if (ocupadas.includes(hora)) {
-          // 🔴 ocupada: NO clickable
-          btn.disabled = true;
-        } else {
-          // 🟢 libre
-          btn.onclick = () => openNewCitaPopup(dateStr, hora);
-        }
-
-        hourList.appendChild(btn);
-      }
-    }
-
-    // --- NUEVA CITA ---
-    function openNewCitaPopup(date, hour) {
-      isEditing = false;
-      editingId = null;
-
-      popupFecha = date;
-      popupHora = hour;
-
-      document.getElementById("citaCliente").value = username;
-      document.getElementById("citaTelefono").value = "";
-      document.getElementById("citaNota").value = "";
-      document.getElementById("popupTitulo").textContent = "Nueva cita";
-
-      document.getElementById("popupCita").style.display = "flex";
-    }
-
-    // --- EDITAR CITA ---
-    function openEditPopup(ev) {
-      isEditing = true;
-      editingEvent = ev;
-      editingId = ev.extendedProps.id;
-
-      const ext = ev.extendedProps;
-
-      popupFecha = ev.start.toISOString().split("T")[0];
-      popupHora = ev.start.toTimeString().slice(0, 5);
-
-      document.getElementById("citaCliente").value = ext.cliente || "";
-      document.getElementById("citaTelefono").value = ext.telefono || "";
-      document.getElementById("citaNota").value = ext.nota || "";
-
-      document.getElementById("popupTitulo").textContent = "Editar cita";
-      document.getElementById("popupCita").style.display = "flex";
-    }
-
-    // --- ELIMINAR CITA ---
-    async function deleteEvent(ev) {
-      if (!confirm("¿Eliminar esta cita?")) return;
-
-      try {
-        await window.api.deleteCita(ev.extendedProps.id);
-      } catch (e) {
-        console.error("Error borrando cita:", e);
-      }
-
-      ev.remove();
-
-      // 🔥 refrescar panel de horas si está abierto
-      const d = hourPanel.dataset.date;
-      if (d) generateHours(d);
-    }
-
-    // =========================
-    // GUARDAR POPUP (sin duplicar, con constraint controlado)
-    // =========================
-    document.getElementById("guardarPopup").onclick = async () => {
-      const trabajadorId = getSelectedTrabajadorId();
-      const empresaId = getSelectedEmpresaId();
-
-      const cliente = document.getElementById("citaCliente").value.trim();
-      const telefono = document.getElementById("citaTelefono").value.trim();
-      const nota = document.getElementById("citaNota").value.trim();
-
-      if (!cliente || !popupFecha || !popupHora) {
-        alert("Faltan datos.");
-        return;
-      }
-
-      const payload = {
-        id: editingId || null,
-        fecha: popupFecha,
-        hora: popupHora,
-        cliente,
-        telefono,
-        nota,
-        estado: "reservado",
-        // compatibilidad vieja/nueva:
-        userId: trabajadorId,
-        trabajador_id: trabajadorId,
-        empresa_id: empresaId,
-        username
-      };
-
-      try {
-        if (isEditing && editingId) {
-          await window.api.updateCita(payload);
-        } else {
-          await window.api.addCita(payload);
-        }
-
-        // ✅ Cerramos popup
-        document.getElementById("popupCita").style.display = "none";
-
-        // ✅ recargar desde BD para que:
-        // - se pinte ROJO siempre
-        // - no haya duplicados
+        // ✅ Cargar y pintar citas al abrir
         await loadAndPaintCitas();
 
-        // ✅ refrescar panel horas del día abierto (para que se vuelva rojo y disabled)
-        const d = hourPanel.dataset.date;
-        if (d) generateHours(d);
+        // =========================
+        // Cargar citas + pintar ROJO
+        // =========================
+        async function loadAndPaintCitas() {
+            const citas = await window.api.getCitas("ALL");
 
-      } catch (err) {
-        console.error("❌ Error guardando cita:", err);
+            // ✅ Filtrar por trabajador + empresa (compatibilidad vieja/nueva)
+            const filtradas = citas.filter(c => {
+                const tId = c.trabajador_id ?? c.userId ?? c.trabajadorId;
+                const eId = c.empresa_id ?? c.empresaId;
+                const okTrab = String(tId) === String(trabajadorIdSel);
+                const okEmp = empresaId ? String(eId) === String(empresaId) : true;
+                return okTrab && okEmp;
+            });
 
-        // ✅ si está ocupada, avisar y refrescar para que salga roja
-        if (String(err?.message || "").includes("UNIQUE constraint failed")) {
-          alert("⚠️ Esa hora ya está reservada.");
-          await loadAndPaintCitas();
-          const d = hourPanel.dataset.date;
-          if (d) generateHours(d);
-          return;
+            // ✅ limpiar eventos antes de repintar
+            calendar.removeAllEvents();
+
+            filtradas.forEach(c => addCitaToCalendar(c));
         }
 
-        alert("❌ No se pudo guardar la cita. Mira la consola (F12).");
-      }
-    };
+        // =========================
+        // Generar horas verde/rojo
+        // =========================
+        function generateHours(dateStr) {
+            hourList.innerHTML = "";
+            hourPanel.style.display = "block";
+            hourPanel.dataset.date = dateStr;
 
-    document.getElementById("cancelarPopup").onclick = () => {
-      document.getElementById("popupCita").style.display = "none";
-    };
+            // horas ocupadas (por eventos ya pintados)
+            const ocupadas = calendar.getEvents()
+                .filter(ev => {
+                    const sameDay = ev.start.toISOString().split("T")[0] === dateStr;
+                    const estado = ev.extendedProps?.estado || "reservado";
+                    return sameDay && estado !== "cancelada"; // ✅ cancelada NO bloquea
+                })
+                .map(ev => ev.start.toTimeString().slice(0, 5));
 
-  }, 50);
+            for (let min = 9 * 60; min <= 18 * 60; min += 30) {
+                const h = String(Math.floor(min / 60)).padStart(2, "0");
+                const m = String(min % 60).padStart(2, "0");
+                const hora = `${h}:${m}`;
+
+                const btn = document.createElement("button");
+                btn.className = ocupadas.includes(hora) ? "hour-btn busy" : "hour-btn free";
+                btn.textContent = hora;
+
+                if (ocupadas.includes(hora)) {
+                    // 🔴 ocupada: NO clickable
+                    btn.disabled = true;
+                } else {
+                    // 🟢 libre
+                    btn.onclick = () => openNewCitaPopup(dateStr, hora);
+                }
+
+                hourList.appendChild(btn);
+            }
+        }
+
+        // --- NUEVA CITA ---
+        function openNewCitaPopup(date, hour) {
+            isEditing = false;
+            editingId = null;
+
+            popupFecha = date;
+            popupHora = hour;
+
+            document.getElementById("citaCliente").value = username;
+            document.getElementById("citaTelefono").value = "";
+            document.getElementById("citaNota").value = "";
+            document.getElementById("popupTitulo").textContent = "Nueva cita";
+
+            document.getElementById("popupCita").style.display = "flex";
+        }
+
+        // --- EDITAR CITA ---
+        function openEditPopup(ev) {
+            isEditing = true;
+            editingEvent = ev;
+            editingId = ev.extendedProps.id;
+
+            const ext = ev.extendedProps;
+
+            popupFecha = ev.start.toISOString().split("T")[0];
+            popupHora = ev.start.toTimeString().slice(0, 5);
+
+            document.getElementById("citaCliente").value = ext.cliente || "";
+            document.getElementById("citaTelefono").value = ext.telefono || "";
+            document.getElementById("citaNota").value = ext.nota || "";
+
+            document.getElementById("popupTitulo").textContent = "Editar cita";
+            document.getElementById("popupCita").style.display = "flex";
+        }
+
+        // --- ELIMINAR CITA ---
+        async function deleteEvent(ev) {
+            if (!confirm("¿Eliminar esta cita?")) return;
+
+            try {
+                await window.api.deleteCita(ev.extendedProps.id);
+            } catch (e) {
+                console.error("Error borrando cita:", e);
+            }
+
+            ev.remove();
+
+            // 🔥 refrescar panel de horas si está abierto
+            const d = hourPanel.dataset.date;
+            if (d) generateHours(d);
+        }
+
+        // =========================
+        // GUARDAR POPUP (sin duplicar, con constraint controlado)
+        // =========================
+        document.getElementById("guardarPopup").onclick = async () => {
+            const trabajadorId = getSelectedTrabajadorId();
+            const empresaId = getSelectedEmpresaId();
+
+            const cliente = document.getElementById("citaCliente").value.trim();
+            const telefono = document.getElementById("citaTelefono").value.trim();
+            const nota = document.getElementById("citaNota").value.trim();
+
+            if (!cliente || !popupFecha || !popupHora) {
+                alert("Faltan datos.");
+                return;
+            }
+
+            const payload = {
+                id: editingId || null,
+                fecha: popupFecha,
+                hora: popupHora,
+                cliente,
+                telefono,
+                nota,
+                estado: "reservado",
+                // compatibilidad vieja/nueva:
+                userId: trabajadorId,
+                trabajador_id: trabajadorId,
+                empresa_id: empresaId,
+                username
+            };
+
+            try {
+                if (isEditing && editingId) {
+                    await window.api.updateCita(payload);
+                } else {
+                    await window.api.addCita(payload);
+                }
+
+                // ✅ Cerramos popup
+                document.getElementById("popupCita").style.display = "none";
+
+                // ✅ recargar desde BD para que:
+                // - se pinte ROJO siempre
+                // - no haya duplicados
+                await loadAndPaintCitas();
+
+                // ✅ refrescar panel horas del día abierto (para que se vuelva rojo y disabled)
+                const d = hourPanel.dataset.date;
+                if (d) generateHours(d);
+
+            } catch (err) {
+                console.error("❌ Error guardando cita:", err);
+
+                // ✅ si está ocupada, avisar y refrescar para que salga roja
+                if (String(err?.message || "").includes("UNIQUE constraint failed")) {
+                    alert("⚠️ Esa hora ya está reservada.");
+                    await loadAndPaintCitas();
+                    const d = hourPanel.dataset.date;
+                    if (d) generateHours(d);
+                    return;
+                }
+
+                alert("❌ No se pudo guardar la cita. Mira la consola (F12).");
+            }
+            // --- NUEVA CITA (OPCIÓN A: reusar cancelada si existe) ---
+            const resCancelada = await window.api.findCitaCancelada({
+                empresa_id: payload.empresa_id,
+                trabajador_id: payload.trabajador_id,
+                fecha: payload.fecha,
+                hora: payload.hora
+            });
+
+            if (resCancelada && resCancelada.id) {
+                // ✅ Reactivar la cita cancelada (UPDATE en lugar de INSERT)
+                payload.id = resCancelada.id;
+
+                await window.api.updateCita({
+                    id: payload.id,
+                    fecha: payload.fecha,
+                    hora: payload.hora,
+                    cliente: payload.cliente,
+                    telefono: payload.telefono,
+                    nota: payload.nota,
+                    estado: "reservado",
+                    empresa_id: payload.empresa_id,
+                    trabajador_id: payload.trabajador_id,
+                    userId: payload.userId,
+                    username: payload.username
+                });
+
+            } else {
+                // ✅ Insert normal
+                const res = await window.api.addCita(payload);
+                payload.id = res?.id || res?.lastID || null;
+            }
+
+        };
+
+
+
+        document.getElementById("cancelarPopup").onclick = () => {
+            document.getElementById("popupCita").style.display = "none";
+        };
+
+    }, 50);
 }
 
 // =========================
 // Pintar cita en calendario (SIEMPRE ROJO)
 // =========================
 function getColorByEstado(estado) {
-  if (estado === "cancelada") return "#9ca3af";   // gris
-  if (estado === "completada") return "#16a34a";  // verde
-  return "#dc2626"; // reservado rojo (o tu azul si prefieres)
+    if (estado === "cancelada") return "#9ca3af";   // gris
+    if (estado === "completada") return "#16a34a";  // verde
+    return "#dc2626"; // reservado rojo (o tu azul si prefieres)
 }
 
 function addCitaToCalendar(c) {
   if (!calendar) return;
 
   const estado = c.estado || "reservado";
-  const color = getColorByEstado(estado);
+  const color =
+    estado === "completada" ? "#16a34a" :
+    estado === "cancelada"  ? "#9ca3af" :
+                              "#dc2626"; // reservado = rojo
 
   calendar.addEvent({
     title: c.cliente || "Reservado",
@@ -562,9 +616,10 @@ function addCitaToCalendar(c) {
       : `${c.fecha}T${c.hora}`,
     backgroundColor: color,
     borderColor: color,
-    extendedProps: { ...c, id: c.id }
+    extendedProps: { ...c, id: c.id ?? c.cita_id ?? c.citaId }
   });
 }
+
 
 
 
@@ -1302,7 +1357,9 @@ async function cargarDashboard() {
     document.getElementById("dashEmpresas").textContent = empresas.length;
     document.getElementById("dashTrabajadores").textContent = trabajadores.length;
     document.getElementById("dashClientes").textContent =
-        clientes.filter(u => u.role === "cliente").length;
+    document.getElementById("dashClientes").textContent =
+    clientes.filter(u => (u.role || "cliente").trim().toLowerCase() === "cliente").length;
+
 
     document.getElementById("dashCitasHoy").textContent =
         citas.filter(c => c.fecha === new Date().toISOString().split("T")[0]).length;
@@ -1449,11 +1506,11 @@ if (adminToggleBtn && adminSubmenu) {
 
 
 async function renderCitas(main) {
-  const citas = await window.api.getCitas("ALL");
-  const empresas = await window.api.getEmpresas();
-  const trabajadores = await window.api.getTrabajadores();
+    const citas = await window.api.getCitas("ALL");
+    const empresas = await window.api.getEmpresas();
+    const trabajadores = await window.api.getTrabajadores();
 
-  main.innerHTML = `
+    main.innerHTML = `
     <h1>Citas 📝</h1>
 
     <div style="display:flex; gap:10px; flex-wrap:wrap; margin: 15px 0;">
@@ -1498,39 +1555,39 @@ async function renderCitas(main) {
     </div>
   `;
 
-  const body = document.getElementById("tablaCitasBody");
+    const body = document.getElementById("tablaCitasBody");
 
-  function nombreEmpresa(id) {
-    return empresas.find(e => String(e.id) === String(id))?.nombre || "—";
-  }
-  function nombreTrabajador(id) {
-    return trabajadores.find(t => String(t.id) === String(id))?.username || "—";
-  }
-  function badgeEstado(estado) {
-    const e = estado || "reservado";
-    const styles =
-      e === "cancelada" ? "background:#e5e7eb;color:#374151;" :
-      e === "completada" ? "background:#dcfce7;color:#166534;" :
-      "background:#fee2e2;color:#991b1b;";
-    return `<span style="padding:6px 10px; border-radius:999px; font-size:12px; ${styles}">${e}</span>`;
-  }
-
-  function pintar(lista) {
-    body.innerHTML = "";
-
-    if (lista.length === 0) {
-      body.innerHTML = `<tr><td colspan="8" style="padding:14px;">No hay citas con esos filtros.</td></tr>`;
-      return;
+    function nombreEmpresa(id) {
+        return empresas.find(e => String(e.id) === String(id))?.nombre || "—";
+    }
+    function nombreTrabajador(id) {
+        return trabajadores.find(t => String(t.id) === String(id))?.username || "—";
+    }
+    function badgeEstado(estado) {
+        const e = estado || "reservado";
+        const styles =
+            e === "cancelada" ? "background:#e5e7eb;color:#374151;" :
+                e === "completada" ? "background:#dcfce7;color:#166534;" :
+                    "background:#fee2e2;color:#991b1b;";
+        return `<span style="padding:6px 10px; border-radius:999px; font-size:12px; ${styles}">${e}</span>`;
     }
 
-    lista
-      .sort((a,b) => (a.fecha+a.hora).localeCompare(b.fecha+b.hora))
-      .forEach(c => {
-        const empresaId = c.empresa_id ?? c.empresaId;
-        const trabajadorId = c.trabajador_id ?? c.userId;
+    function pintar(lista) {
+        body.innerHTML = "";
 
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
+        if (lista.length === 0) {
+            body.innerHTML = `<tr><td colspan="8" style="padding:14px;">No hay citas con esos filtros.</td></tr>`;
+            return;
+        }
+
+        lista
+            .sort((a, b) => (a.fecha + a.hora).localeCompare(b.fecha + b.hora))
+            .forEach(c => {
+                const empresaId = c.empresa_id ?? c.empresaId;
+                const trabajadorId = c.trabajador_id ?? c.userId;
+
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
           <td style="padding:12px; border-top:1px solid #eee;">${c.fecha}</td>
           <td style="padding:12px; border-top:1px solid #eee;">${c.hora}</td>
           <td style="padding:12px; border-top:1px solid #eee;">${c.cliente || ""}</td>
@@ -1544,71 +1601,72 @@ async function renderCitas(main) {
             <button data-id="${c.id}" data-accion="borrar">🗑️</button>
           </td>
         `;
-        body.appendChild(tr);
-      });
+                body.appendChild(tr);
+            });
 
-    // acciones
-    body.querySelectorAll("button").forEach(btn => {
-      btn.style.border = "1px solid #ddd";
-      btn.style.borderRadius = "8px";
-      btn.style.padding = "6px 10px";
-      btn.style.cursor = "pointer";
-      btn.onclick = async () => {
-        const id = btn.getAttribute("data-id");
-        const accion = btn.getAttribute("data-accion");
+        // acciones
+        body.querySelectorAll("button").forEach(btn => {
+            btn.style.border = "1px solid #ddd";
+            btn.style.borderRadius = "8px";
+            btn.style.padding = "6px 10px";
+            btn.style.cursor = "pointer";
+            btn.onclick = async () => {
+                const id = btn.getAttribute("data-id");
+                const accion = btn.getAttribute("data-accion");
 
-        if (accion === "completar") {
-          await window.api.setCitaEstado({ id, estado: "completada" });
-        }
-        if (accion === "cancelar") {
-          await window.api.setCitaEstado({ id, estado: "cancelada" });
-        }
-        if (accion === "borrar") {
-          if (!confirm("¿Eliminar definitivamente la cita?")) return;
-          await window.api.deleteCita(id);
-        }
+                if (accion === "completar") {
+                    await window.api.setCitaEstado({ id, estado: "completada" });
+                }
+                if (accion === "cancelar") {
+                    await window.api.setCitaEstado({ id, estado: "cancelada" });
+                }
+                if (accion === "borrar") {
+                    if (!confirm("¿Eliminar definitivamente la cita?")) return;
+                    await window.api.deleteCita(id);
+                }
 
-        // recargar lista
-        const nuevas = await window.api.getCitas("ALL");
-        aplicarFiltros(nuevas);
-      };
+                // recargar lista
+                const nuevas = await window.api.getCitas("ALL");
+                aplicarFiltros(nuevas);
+            };
+        });
+    }
+
+    function aplicarFiltros(lista) {
+        const fFecha = document.getElementById("fFecha").value;
+        const fEstado = document.getElementById("fEstado").value;
+        const fEmpresa = document.getElementById("fEmpresa").value;
+        const fTrabajador = document.getElementById("fTrabajador").value;
+        const fTexto = document.getElementById("fTexto").value.toLowerCase();
+
+        const filtrada = lista.filter(c => {
+            const empresaId = String(c.empresa_id ?? c.empresaId ?? "");
+            const trabajadorId = String(c.trabajador_id ?? c.userId ?? "");
+            const estado = c.estado || "reservado";
+
+            if (fFecha && c.fecha !== fFecha) return false;
+            if (fEstado && estado !== fEstado) return false;
+            if (fEmpresa && empresaId !== String(fEmpresa)) return false;
+            if (fTrabajador && trabajadorId !== String(fTrabajador)) return false;
+            if (fTexto && !(c.cliente || "").toLowerCase().includes(fTexto)) return false;
+
+            return true;
+        });
+
+        pintar(filtrada);
+    }
+
+    // listeners filtros
+    ["fFecha", "fEstado", "fEmpresa", "fTrabajador", "fTexto"].forEach(id => {
+        document.getElementById(id).addEventListener("input", async () => {
+            const nuevas = await window.api.getCitas("ALL");
+            aplicarFiltros(nuevas);
+        });
     });
-  }
 
-  function aplicarFiltros(lista) {
-    const fFecha = document.getElementById("fFecha").value;
-    const fEstado = document.getElementById("fEstado").value;
-    const fEmpresa = document.getElementById("fEmpresa").value;
-    const fTrabajador = document.getElementById("fTrabajador").value;
-    const fTexto = document.getElementById("fTexto").value.toLowerCase();
+    // primera pinta
+    pintar(citas);
 
-    const filtrada = lista.filter(c => {
-      const empresaId = String(c.empresa_id ?? c.empresaId ?? "");
-      const trabajadorId = String(c.trabajador_id ?? c.userId ?? "");
-      const estado = c.estado || "reservado";
-
-      if (fFecha && c.fecha !== fFecha) return false;
-      if (fEstado && estado !== fEstado) return false;
-      if (fEmpresa && empresaId !== String(fEmpresa)) return false;
-      if (fTrabajador && trabajadorId !== String(fTrabajador)) return false;
-      if (fTexto && !(c.cliente || "").toLowerCase().includes(fTexto)) return false;
-
-      return true;
-    });
-
-    pintar(filtrada);
-  }
-
-  // listeners filtros
-  ["fFecha","fEstado","fEmpresa","fTrabajador","fTexto"].forEach(id => {
-    document.getElementById(id).addEventListener("input", async () => {
-      const nuevas = await window.api.getCitas("ALL");
-      aplicarFiltros(nuevas);
-    });
-  });
-
-  // primera pinta
-  pintar(citas);
 }
 
 // ======================
