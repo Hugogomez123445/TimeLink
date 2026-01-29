@@ -35,10 +35,12 @@ contextBridge.exposeInMainWorld("api", {
   setCitaEstado: (data) => ipcRenderer.invoke("set-cita-estado", data),
 
   getClientes: () => ipcRenderer.invoke("get-clientes"),
-  getCitasTrabajador: (data) => ipcRenderer.invoke("get-citas-trabajador", data),
 
   updateProfile: (data) => ipcRenderer.invoke("update-profile", data),
-updatePassword: (data) => ipcRenderer.invoke("update-password", data),
+  updatePassword: (data) => ipcRenderer.invoke("update-password", data),
+
+  getCitasTrabajador: (data) => ipcRenderer.invoke("get-citas-trabajador", data),
+
 
 
 });
