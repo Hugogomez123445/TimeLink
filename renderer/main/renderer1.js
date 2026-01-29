@@ -14,6 +14,36 @@ const userEmail = localStorage.getItem("email") || "email@example.com";
 document.getElementById("userName").textContent = username;
 document.getElementById("userEmail").textContent = userEmail;
 
+
+// ======================
+// API WRAPPERS (NUEVA BD: admins / trabajadores / clientes)
+// ======================
+async function apiGetEmpresas() {
+    return await window.api.getEmpresas();
+}
+
+async function apiGetTrabajadores() {
+    // ya la tienes
+    return await window.api.getTrabajadores();
+}
+
+async function apiGetClientes() {
+    // NUEVO: debe existir en preload/main
+    if (!window.api.getClientes) return [];
+    return await window.api.getClientes();
+}
+
+async function apiDeleteCliente(id) {
+    if (!window.api.deleteCliente) throw new Error("deleteCliente no existe en preload");
+    return await window.api.deleteCliente(id);
+}
+
+async function apiGetAdmins() {
+    // opcional si quieres listarlos
+    if (!window.api.getAdmins) return [];
+    return await window.api.getAdmins();
+}
+
 // ======================
 // CONTROL DE PERMISOS POR ROL
 // ======================
@@ -175,11 +205,7 @@ function navigate(section) {
 
 
         case "ajustes":
-            main.innerHTML = "<h1>Ajustes ⚙️</h1><p>Configuraciones del usuario.</p>";
-            break;
-
-        case "adminPanel":
-            renderAdminPanel(main);
+            renderAjustes(main);
             break;
 
         case "adminUsuarios":
@@ -197,6 +223,8 @@ function navigate(section) {
         case "trabajadores":
             renderTrabajadores(main);
             break;
+
+
     }
 }
 
@@ -601,23 +629,23 @@ function getColorByEstado(estado) {
 }
 
 function addCitaToCalendar(c) {
-  if (!calendar) return;
+    if (!calendar) return;
 
-  const estado = c.estado || "reservado";
-  const color =
-    estado === "completada" ? "#16a34a" :
-    estado === "cancelada"  ? "#9ca3af" :
-                              "#dc2626"; // reservado = rojo
+    const estado = c.estado || "reservado";
+    const color =
+        estado === "completada" ? "#16a34a" :
+            estado === "cancelada" ? "#9ca3af" :
+                "#dc2626"; // reservado = rojo
 
-  calendar.addEvent({
-    title: c.cliente || "Reservado",
-    start: (c.hora && c.hora.length === 5)
-      ? `${c.fecha}T${c.hora}:00`
-      : `${c.fecha}T${c.hora}`,
-    backgroundColor: color,
-    borderColor: color,
-    extendedProps: { ...c, id: c.id ?? c.cita_id ?? c.citaId }
-  });
+    calendar.addEvent({
+        title: c.cliente || "Reservado",
+        start: (c.hora && c.hora.length === 5)
+            ? `${c.fecha}T${c.hora}:00`
+            : `${c.fecha}T${c.hora}`,
+        backgroundColor: color,
+        borderColor: color,
+        extendedProps: { ...c, id: c.id ?? c.cita_id ?? c.citaId }
+    });
 }
 
 
@@ -632,181 +660,158 @@ async function renderClientes(main) {
         return;
     }
 
+    const clientes = await apiGetClientes();
+    const citas = await window.api.getCitas("ALL");
+
     main.innerHTML = `
-        <h1>Clientes 👤</h1>
+    <h1>Clientes 👤</h1>
 
-        <div class="clientes-layout">
+    <div class="clientes-layout">
+      <div class="clientes-card">
+        <h3>Lista de clientes</h3>
+        <p class="sub">Selecciona un cliente para ver sus citas.</p>
+        <div id="clientesListaInner"></div>
+      </div>
 
-            <div class="clientes-card">
-                <h3>Lista de clientes</h3>
-                <p class="sub">Selecciona un cliente para ver sus citas.</p>
-                <div id="clientesListaInner"></div>
-            </div>
-
-            <div class="clientes-card cliente-citas">
-                <h3 id="clienteTitulo">Citas del cliente</h3>
-                <div id="clienteCitasContenido" class="cliente-citas-contenido">
-                    Aún no has seleccionado ningún cliente.
-                </div>
-            </div>
-
+      <div class="clientes-card cliente-citas">
+        <h3 id="clienteTitulo">Citas del cliente</h3>
+        <div id="clienteCitasContenido" class="cliente-citas-contenido">
+          Aún no has seleccionado ningún cliente.
         </div>
-    `;
+      </div>
+    </div>
+  `;
 
-    setTimeout(async () => {
-        const listaDiv = document.getElementById("clientesListaInner");
-        const contenidoDiv = document.getElementById("clienteCitasContenido");
-        const tituloCliente = document.getElementById("clienteTitulo");
+    const listaDiv = document.getElementById("clientesListaInner");
+    const contenidoDiv = document.getElementById("clienteCitasContenido");
+    const tituloCliente = document.getElementById("clienteTitulo");
 
-        const citas = await window.api.getCitas("ALL");
-        const porCliente = {};
-
-        citas.forEach(c => {
-            if (!porCliente[c.cliente]) porCliente[c.cliente] = [];
-            porCliente[c.cliente].push(c);
-        });
-
-        Object.keys(porCliente).forEach(nombre => {
-            const item = document.createElement("div");
-            item.className = "cliente-item";
-            item.textContent = nombre;
-
-            item.onclick = () => {
-                tituloCliente.textContent = `Citas de ${nombre}`;
-
-                let html = `
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Fecha</th>
-                                <th>Hora</th>
-                                <th>Teléfono</th>
-                                <th>Nota</th>
-                                <th>Usuario</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                `;
-
-                porCliente[nombre].forEach(c => {
-                    html += `
-                        <tr>
-                            <td>${c.fecha}</td>
-                            <td>${c.hora}</td>
-                            <td>${c.telefono || ""}</td>
-                            <td>${c.nota || ""}</td>
-                            <td>${c.username || ""}</td>
-                        </tr>
-                    `;
-                });
-
-                html += "</tbody></table>";
-                contenidoDiv.innerHTML = html;
-            };
-
-            listaDiv.appendChild(item);
-        });
-    }, 60);
-}
-
-// ======================
-// PANEL ADMIN (para trabajadores / admin)
-// ======================
-function renderAdminPanel(main) {
-    if (role !== "trabajador" && role !== "admin") {
-        main.innerHTML = "<h1>Acceso denegado 🔒</h1>";
+    if (clientes.length === 0) {
+        listaDiv.innerHTML = `<p>No hay clientes.</p>`;
         return;
     }
 
-    main.innerHTML = `
-        <h1>Panel de Administración ⭐</h1>
+    clientes.forEach(cli => {
+        const nombre = cli.nombre || cli.username || "";
 
-        <div class="admin-panel-buttons">
+        const item = document.createElement("div");
+        item.className = "cliente-item";
+        item.textContent = nombre;
 
-            <div class="admin-card">
-                <h3>Usuarios 👤</h3>
-                <p>Gestión de usuarios.</p>
-                <button onclick="navigate('adminUsuarios')">Abrir</button>
-            </div>
+        item.onclick = () => {
+            tituloCliente.textContent = `Citas de ${nombre}`;
 
-            <div class="admin-card">
-                <h3>Citas 📅</h3>
-                <p>Gestionar todas las citas.</p>
-                <button onclick="navigate('adminCitas')">Abrir</button>
-            </div>
+            // compatibilidad: si hoy tus citas guardan "cliente" en texto
+            const citasCliente = citas.filter(c => (c.cliente || "").trim() === nombre.trim());
 
-        </div>
-    `;
+            if (citasCliente.length === 0) {
+                contenidoDiv.innerHTML = `<p>Este cliente no tiene citas.</p>`;
+                return;
+            }
+
+            let html = `
+        <table>
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Hora</th>
+              <th>Teléfono</th>
+              <th>Nota</th>
+              <th>Usuario</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+            citasCliente.forEach(c => {
+                html += `
+          <tr>
+            <td>${c.fecha}</td>
+            <td>${c.hora}</td>
+            <td>${c.telefono || ""}</td>
+            <td>${c.nota || ""}</td>
+            <td>${c.username || ""}</td>
+          </tr>
+        `;
+            });
+
+            html += "</tbody></table>";
+            contenidoDiv.innerHTML = html;
+        };
+
+        listaDiv.appendChild(item);
+    });
 }
+
 
 // ======================
 // ADMIN - USUARIOS
 // ======================
 async function renderAdminUsuarios(main) {
-    const usuarios = await window.api.getAllUsers();
+    // En la nueva BD: "usuarios" = clientes (admins y trabajadores se gestionan en sus secciones)
+    const clientes = await apiGetClientes();
 
     main.innerHTML = `
-        <h1>Gestión de Usuarios 👥</h1>
+    <h1>Gestión de Clientes 👥</h1>
 
-        <table class="admin-table">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Usuario</th>
-                    <th>Email</th>
-                    <th>Rol</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nombre</th>
+          <th>Email</th>
+          <th>Teléfono</th>
+          <th>Empresa</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="tablaClientes"></tbody>
+    </table>
+  `;
 
-            <tbody id="tablaUsuarios"></tbody>
-        </table>
-    `;
+    const tbody = document.getElementById("tablaClientes");
+    tbody.innerHTML = "";
 
-    const tbody = document.getElementById("tablaUsuarios");
+    if (clientes.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6">No hay clientes.</td></tr>`;
+        return;
+    }
 
-    usuarios.forEach(u => {
+    // si en tu tabla clientes guardas empresa_id, lo pintamos
+    const empresas = await apiGetEmpresas();
+
+    function nombreEmpresa(id) {
+        return empresas.find(e => String(e.id) === String(id))?.nombre || "—";
+    }
+
+    clientes.forEach(c => {
         const tr = document.createElement("tr");
 
         tr.innerHTML = `
-            <td>${u.id}</td>
-            <td>${u.username}</td>
-            <td>${u.email}</td>
-
-            <td>
-                <select data-user-id="${u.id}">
-                    <option value="cliente" ${u.role === "cliente" ? "selected" : ""}>Cliente</option>
-                    <option value="admin" ${u.role === "admin" ? "selected" : ""}>Admin</option>
-                    <option value="trabajador" ${u.role === "trabajador" ? "selected" : ""}>Trabajador</option>
-                </select>
-            </td>
-
-            <td>
-                <button data-del="${u.id}" class="btn-danger">Eliminar</button>
-            </td>
-        `;
+      <td>${c.id}</td>
+      <td>${c.nombre || c.username || ""}</td>
+      <td>${c.email || ""}</td>
+      <td>${c.telefono || ""}</td>
+      <td>${nombreEmpresa(c.empresa_id)}</td>
+      <td>
+        <button data-del="${c.id}" class="btn-danger">Eliminar</button>
+      </td>
+    `;
 
         tbody.appendChild(tr);
     });
 
-    tbody.querySelectorAll("select").forEach(sel => {
-        sel.onchange = async () => {
-            await window.api.updateUserRole({
-                id: sel.getAttribute("data-user-id"),
-                role: sel.value
-            });
-            alert("Rol actualizado correctamente");
-        };
-    });
-
     tbody.querySelectorAll("button[data-del]").forEach(btn => {
         btn.onclick = async () => {
-            if (!confirm("¿Eliminar este usuario?")) return;
-            await window.api.deleteUser(btn.getAttribute("data-del"));
+            const id = btn.getAttribute("data-del");
+            if (!confirm("¿Eliminar este cliente?")) return;
+
+            await apiDeleteCliente(id);
             renderAdminUsuarios(main);
         };
     });
 }
+
 
 // ======================
 // ADMIN - CITAS
@@ -1086,23 +1091,29 @@ async function renderTrabajadores(main) {
     empresasGlobalList = empresas;
 
     main.innerHTML = `
-        <h1 class="title-page">Trabajadores 👷‍♂️</h1>
+  <h1 class="title-page">Trabajadores 👷‍♂️</h1>
 
-        <div class="trabajador-toolbar">
-            <button class="btn-primary add-empresa-btn" onclick="nuevoTrabajador()">
-                ➕ Añadir trabajador
-            </button>
+  <div class="trabajador-toolbar" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+      
+      <button class="btn-primary add-empresa-btn" onclick="nuevoTrabajador()">
+          ➕ Añadir trabajador
+      </button>
 
-            <input 
-                type="text"
-                id="buscarTrabajador"
-                class="empresa-search"
-                placeholder="🔎 Buscar trabajador..."
-            >
-        </div>
+      <button class="btn-primary" onclick="verTodasLasCitas()" style="background:#111827;">
+          📅 Ver las citas
+      </button>
 
-        <div id="trabajadorGrid" class="empresa-grid"></div>
-    `;
+      <input 
+          type="text"
+          id="buscarTrabajador"
+          class="empresa-search"
+          placeholder="🔎 Buscar trabajador..."
+      >
+  </div>
+
+  <div id="trabajadorGrid" class="empresa-grid"></div>
+`;
+
 
     pintarTrabajadores(trabajadoresGlobal);
 
@@ -1114,6 +1125,17 @@ async function renderTrabajadores(main) {
         pintarTrabajadores(filtrados);
     };
 }
+
+function verTodasLasCitas() {
+    // Limpia filtros “guardados” por si antes filtrabas por trabajador/empresa
+    localStorage.removeItem("citasFiltroTrabajador");
+    localStorage.removeItem("citasFiltroEmpresa");
+
+    navigate("citas");
+}
+
+window.verTodasLasCitas = verTodasLasCitas;
+
 
 function pintarTrabajadores(lista) {
     const grid = document.getElementById("trabajadorGrid");
@@ -1348,27 +1370,29 @@ function cargarInicioBasico() {
 }
 
 async function cargarDashboard() {
-
     const empresas = await window.api.getEmpresas();
     const trabajadores = await window.api.getTrabajadores();
-    const clientes = await window.api.getAllUsers();
+    const clientes = await window.api.getClientes();   // ✅ ahora viene de tabla clientes
     const citas = await window.api.getCitas("ALL");
 
     document.getElementById("dashEmpresas").textContent = empresas.length;
     document.getElementById("dashTrabajadores").textContent = trabajadores.length;
-    document.getElementById("dashClientes").textContent =
-    document.getElementById("dashClientes").textContent =
-    clientes.filter(u => (u.role || "cliente").trim().toLowerCase() === "cliente").length;
 
+    // ✅ Clientes reales
+    document.getElementById("dashClientes").textContent = clientes.length;
+
+    const hoy = new Date().toISOString().split("T")[0];
 
     document.getElementById("dashCitasHoy").textContent =
-        citas.filter(c => c.fecha === new Date().toISOString().split("T")[0]).length;
+        citas.filter(c => (c.estado || "reservado") === "reservado").length;
 
-    // 🔥 cargar módulos extra
+
     cargarGraficaSemanal();
     cargarAlertas();
     cargarActividadReciente();
 }
+
+
 
 
 
@@ -1466,25 +1490,35 @@ async function cargarAlertas() {
 
 
 async function cargarActividadReciente() {
-
     const citas = await window.api.getCitas("ALL");
-    const actividades = [];
 
-    citas.slice(-10).reverse().forEach(c => {
-        actividades.push({
-            texto: `📅 Cita creada por ${c.cliente} (${c.fecha} - ${c.hora})`,
-            fecha: c.fecha
-        });
+    // ya vienen ordenadas por updated_at/created_at DESC desde main.js
+    const ultimas = citas.slice(0, 10);
+
+    const actividades = ultimas.map(c => {
+        const estado = (c.estado || "reservado").toLowerCase();
+        const when = c.updated_at || c.created_at || c.fecha;
+
+        let texto = `📅 Cita creada: ${c.cliente || "—"} (${c.fecha} - ${c.hora})`;
+
+        if (estado === "cancelada") {
+            texto = `🚫 Cita cancelada: ${c.cliente || "—"} (${c.fecha} - ${c.hora})`;
+        }
+        if (estado === "completada") {
+            texto = `✅ Cita completada: ${c.cliente || "—"} (${c.fecha} - ${c.hora})`;
+        }
+
+        return { texto, when };
     });
 
     const div = document.getElementById("actividadReciente");
 
     div.innerHTML = actividades.map(a => `
-        <div class="item">
-            <div>${a.texto}</div>
-            <div class="fecha">${a.fecha}</div>
-        </div>
-    `).join("");
+    <div class="item">
+      <div>${a.texto}</div>
+      <div class="fecha">${a.when}</div>
+    </div>
+  `).join("");
 }
 
 
@@ -1506,9 +1540,29 @@ if (adminToggleBtn && adminSubmenu) {
 
 
 async function renderCitas(main) {
-    const citas = await window.api.getCitas("ALL");
-    const empresas = await window.api.getEmpresas();
-    const trabajadores = await window.api.getTrabajadores();
+    const role = localStorage.getItem("role");
+    const userId = localStorage.getItem("userId");
+
+    let citas = [];
+    let empresas = [];
+    let trabajadores = [];
+
+    if (role === "trabajador") {
+        // 🔒 trabajador → SOLO sus citas
+        citas = await window.api.getCitasTrabajador({
+            trabajador_id: userId
+        });
+
+        // solo necesita SU empresa y él mismo
+        trabajadores = await window.api.getTrabajadores();
+        empresas = await window.api.getEmpresas();
+
+    } else {
+        // 👑 admin
+        citas = await window.api.getCitas("ALL");
+        empresas = await window.api.getEmpresas();
+        trabajadores = await window.api.getTrabajadores();
+    }
 
     main.innerHTML = `
     <h1>Citas 📝</h1>
@@ -1554,6 +1608,13 @@ async function renderCitas(main) {
       </table>
     </div>
   `;
+
+    if (role === "trabajador") {
+        const fEmpresa = document.getElementById("fEmpresa");
+        const fTrabajador = document.getElementById("fTrabajador");
+        if (fEmpresa) fEmpresa.style.display = "none";
+        if (fTrabajador) fTrabajador.style.display = "none";
+    }
 
     const body = document.getElementById("tablaCitasBody");
 
@@ -1668,6 +1729,463 @@ async function renderCitas(main) {
     pintar(citas);
 
 }
+// ======================
+// AJUSTES (CON BD + 3 TABLAS)
+// Requiere en preload:
+//   updateProfile: (data) => ipcRenderer.invoke("update-profile", data)
+//   updatePassword: (data) => ipcRenderer.invoke("update-password", data)
+// ======================
+async function renderAjustes(main) {
+
+    // ----------------------
+    // Helpers UI
+    // ----------------------
+    function escapeHtml(str = "") {
+        return String(str)
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
+    }
+
+    function inputStyle() {
+        return `
+      width:100%;
+      padding:10px 12px;
+      border-radius:10px;
+      border:1px solid #e5e7eb;
+      outline:none;
+      background:#fff;
+    `;
+    }
+
+    function btnPrimary() {
+        return `
+      padding:10px 14px;
+      border-radius:10px;
+      border:0;
+      background:#2563eb;
+      color:white;
+      cursor:pointer;
+      font-weight:600;
+    `;
+    }
+
+    function btnGhost() {
+        return `
+      padding:10px 14px;
+      border-radius:10px;
+      border:1px solid #e5e7eb;
+      background:#fff;
+      cursor:pointer;
+      font-weight:600;
+    `;
+    }
+
+    function btnDanger() {
+        return `
+      padding:10px 14px;
+      border-radius:10px;
+      border:0;
+      background:#dc2626;
+      color:white;
+      cursor:pointer;
+      font-weight:700;
+    `;
+    }
+
+    function pintarAvatar(imagen, nombre) {
+        const cont = document.getElementById("ajustesAvatar");
+        if (!cont) return;
+
+        if (imagen) {
+            cont.innerHTML = `<img src="${imagen}" style="width:100%;height:100%;object-fit:cover;">`;
+            return;
+        }
+
+        const inicial = (nombre?.trim()?.[0] || "?").toUpperCase();
+        cont.textContent = inicial;
+    }
+
+    async function fileToBase64(file) {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.readAsDataURL(file);
+        });
+    }
+
+    // ----------------------
+    // Datos sesión
+    // ----------------------
+    const userId = localStorage.getItem("userId"); // importante
+    const role = (localStorage.getItem("role") || "cliente").toLowerCase();
+
+    const username = localStorage.getItem("username") || "";
+    const email = localStorage.getItem("email") || "";
+    const imagen = localStorage.getItem("imagen") || "";
+
+    const empresaSel = localStorage.getItem("seleccion_empresa") || "";
+    const trabajadorSel = localStorage.getItem("seleccion_trabajador") || "";
+
+    // Preferencias (local)
+    const prefTema = localStorage.getItem("pref_tema") || "claro"; // claro | oscuro
+    const prefNotifs = localStorage.getItem("pref_notifs") || "si"; // si | no
+    const prefFormatoHora = localStorage.getItem("pref_formato_hora") || "24"; // 24 | 12
+
+    // ----------------------
+    // UI
+    // ----------------------
+    main.innerHTML = `
+    <h1 class="title-page">Ajustes ⚙️</h1>
+
+    <div style="display:grid; gap:16px; max-width:900px;">
+
+      <!-- PERFIL -->
+      <div style="background:white; border-radius:14px; padding:16px; box-shadow:0 4px 10px rgba(0,0,0,.06);">
+        <h2 style="margin-bottom:10px;">👤 Perfil</h2>
+
+        <div style="display:flex; gap:14px; align-items:center; flex-wrap:wrap;">
+          <div id="ajustesAvatar" style="
+              width:70px; height:70px; border-radius:999px;
+              background:#e5e7eb; display:flex; align-items:center; justify-content:center;
+              overflow:hidden; font-size:26px; font-weight:700; color:#111827;
+          "></div>
+
+          <div style="flex:1; min-width:260px;">
+            <div style="display:grid; gap:10px;">
+              <label>
+                <div style="font-size:12px; color:#6b7280; margin-bottom:4px;">Usuario</div>
+                <input id="aj_username" value="${escapeHtml(username)}" style="${inputStyle()}" />
+              </label>
+
+              <label>
+                <div style="font-size:12px; color:#6b7280; margin-bottom:4px;">Email</div>
+                <input id="aj_email" value="${escapeHtml(email)}" style="${inputStyle()}" />
+              </label>
+
+              <label>
+                <div style="font-size:12px; color:#6b7280; margin-bottom:4px;">Foto (opcional)</div>
+                <input id="aj_imagen" type="file" accept="image/*" style="width:100%;" />
+              </label>
+
+              <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                <button id="btnGuardarPerfil" style="${btnPrimary()}">Guardar perfil</button>
+                <button id="btnQuitarFoto" style="${btnGhost()}">Quitar foto</button>
+              </div>
+
+              <div style="font-size:12px; color:#6b7280;">
+                Rol actual: <b>${escapeHtml(role)}</b>
+              </div>
+
+              <div id="perfilMsg" style="font-size:13px; margin-top:6px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SEGURIDAD -->
+      <div style="background:white; border-radius:14px; padding:16px; box-shadow:0 4px 10px rgba(0,0,0,.06);">
+        <h2 style="margin-bottom:10px;">🔒 Seguridad</h2>
+
+        <div style="display:grid; gap:10px; max-width:520px;">
+          <label>
+            <div style="font-size:12px; color:#6b7280; margin-bottom:4px;">Contraseña actual</div>
+            <input id="aj_oldPass" type="password" placeholder="********" style="${inputStyle()}" />
+          </label>
+
+          <label>
+            <div style="font-size:12px; color:#6b7280; margin-bottom:4px;">Nueva contraseña</div>
+            <input id="aj_newPass1" type="password" placeholder="********" style="${inputStyle()}" />
+          </label>
+
+          <label>
+            <div style="font-size:12px; color:#6b7280; margin-bottom:4px;">Repetir nueva contraseña</div>
+            <input id="aj_newPass2" type="password" placeholder="********" style="${inputStyle()}" />
+          </label>
+
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button id="btnCambiarPass" style="${btnPrimary()}">Cambiar contraseña</button>
+            <button id="btnMostrarPass" style="${btnGhost()}">Mostrar / Ocultar</button>
+          </div>
+
+          <div id="passMsg" style="font-size:13px;"></div>
+        </div>
+      </div>
+
+      <!-- PREFERENCIAS -->
+      <div style="background:white; border-radius:14px; padding:16px; box-shadow:0 4px 10px rgba(0,0,0,.06);">
+        <h2 style="margin-bottom:10px;">🎛️ Preferencias</h2>
+
+        <div style="display:grid; gap:10px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));">
+
+          <label>
+            <div style="font-size:12px; color:#6b7280; margin-bottom:4px;">Notificaciones</div>
+            <select id="aj_notifs" style="${inputStyle()}">
+              <option value="si" ${prefNotifs === "si" ? "selected" : ""}>Activadas</option>
+              <option value="no" ${prefNotifs === "no" ? "selected" : ""}>Desactivadas</option>
+            </select>
+          </label>
+
+          <label>
+            <div style="font-size:12px; color:#6b7280; margin-bottom:4px;">Formato de hora</div>
+            <select id="aj_formatoHora" style="${inputStyle()}">
+              <option value="24" ${prefFormatoHora === "24" ? "selected" : ""}>24h</option>
+              <option value="12" ${prefFormatoHora === "12" ? "selected" : ""}>12h</option>
+            </select>
+          </label>
+        </div>
+
+        <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
+          <button id="btnGuardarPrefs" style="${btnPrimary()}">Guardar preferencias</button>
+          <button id="btnResetPrefs" style="${btnGhost()}">Restablecer</button>
+        </div>
+
+        <div id="prefsMsg" style="font-size:13px; margin-top:10px;"></div>
+      </div>
+
+      <!-- SESIÓN / DATOS -->
+      <div style="background:white; border-radius:14px; padding:16px; box-shadow:0 4px 10px rgba(0,0,0,.06);">
+        <h2 style="margin-bottom:10px;">🧾 Sesión y datos</h2>
+
+        <div style="display:grid; gap:10px;">
+          <div style="font-size:13px; color:#374151;">
+            • Empresa seleccionada: <b>${escapeHtml(empresaSel || "—")}</b><br>
+            • Trabajador seleccionado: <b>${escapeHtml(trabajadorSel || "—")}</b>
+          </div>
+
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button id="btnLimpiarSeleccion" style="${btnGhost()}">Limpiar selección (empresa/trabajador)</button>
+            <button id="btnBorrarLocal" style="${btnGhost()}">Borrar preferencias locales</button>
+            <button id="btnCerrarSesion" style="${btnDanger()}">Cerrar sesión</button>
+          </div>
+
+          <div style="font-size:12px; color:#6b7280;">
+            Usuario ID: <b>${escapeHtml(userId || "—")}</b>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  `;
+
+    // Avatar
+    pintarAvatar(imagen, username);
+
+    // ----------------------
+    // PERFIL -> guardar en BD + localStorage
+    // ----------------------
+    const perfilMsg = document.getElementById("perfilMsg");
+
+    document.getElementById("btnGuardarPerfil").onclick = async () => {
+        try {
+            if (!userId) {
+                alert("❌ No hay sesión iniciada.");
+                return;
+            }
+
+            const newUser = document.getElementById("aj_username").value.trim();
+            const newEmail = document.getElementById("aj_email").value.trim();
+            const file = document.getElementById("aj_imagen").files?.[0];
+
+            if (!newUser) return alert("El usuario no puede estar vacío.");
+
+            // imagen -> base64 (si hay)
+            let newImagen = localStorage.getItem("imagen") || "";
+            if (file) newImagen = await fileToBase64(file);
+
+            // 🔥 BD
+            if (!window.api?.updateProfile) {
+                alert("❌ Falta window.api.updateProfile en preload.js");
+                return;
+            }
+
+            const res = await window.api.updateProfile({
+                role,
+                id: userId,
+                username: newUser,
+                email: newEmail,
+                imagen: newImagen
+            });
+
+            if (!res?.success) {
+                perfilMsg.textContent = "❌ " + (res?.message || "No se pudo guardar.");
+                perfilMsg.style.color = "#b91c1c";
+                return;
+            }
+
+            // ✅ actualizar localStorage
+            localStorage.setItem("username", newUser);
+            localStorage.setItem("email", newEmail);
+            localStorage.setItem("imagen", newImagen);
+
+            // ✅ refrescar UI
+            pintarAvatar(newImagen, newUser);
+            loadSidebarAvatar?.();
+
+            // ✅ header
+            const uName = document.getElementById("userName");
+            const uEmail = document.getElementById("userEmail");
+            if (uName) uName.textContent = newUser;
+            if (uEmail) uEmail.textContent = newEmail;
+
+            perfilMsg.textContent = "✅ Perfil guardado correctamente.";
+            perfilMsg.style.color = "#15803d";
+
+        } catch (e) {
+            console.error(e);
+            perfilMsg.textContent = "❌ Error guardando perfil. Mira consola (F12).";
+            perfilMsg.style.color = "#b91c1c";
+        }
+    };
+
+    document.getElementById("btnQuitarFoto").onclick = async () => {
+        try {
+            if (!userId) {
+                alert("❌ No hay sesión iniciada.");
+                return;
+            }
+
+            // quitar de BD y local
+            if (!window.api?.updateProfile) {
+                alert("❌ Falta window.api.updateProfile en preload.js");
+                return;
+            }
+
+            const res = await window.api.updateProfile({
+                role,
+                id: userId,
+                username: localStorage.getItem("username") || "",
+                email: localStorage.getItem("email") || "",
+                imagen: "" // quitar
+            });
+
+            if (!res?.success) {
+                alert("❌ No se pudo quitar la foto.");
+                return;
+            }
+
+            localStorage.removeItem("imagen");
+            pintarAvatar("", localStorage.getItem("username") || "");
+            loadSidebarAvatar?.();
+
+            perfilMsg.textContent = "✅ Foto eliminada.";
+            perfilMsg.style.color = "#15803d";
+        } catch (e) {
+            console.error(e);
+            alert("❌ Error quitando foto.");
+        }
+    };
+
+    // ----------------------
+    // SEGURIDAD -> update-password (BD)
+    // ----------------------
+    let passVisible = false;
+    const passMsg = document.getElementById("passMsg");
+
+    document.getElementById("btnMostrarPass").onclick = () => {
+        passVisible = !passVisible;
+        document.getElementById("aj_oldPass").type = passVisible ? "text" : "password";
+        document.getElementById("aj_newPass1").type = passVisible ? "text" : "password";
+        document.getElementById("aj_newPass2").type = passVisible ? "text" : "password";
+    };
+
+    document.getElementById("btnCambiarPass").onclick = async () => {
+        try {
+            if (!userId) {
+                alert("❌ No hay sesión iniciada.");
+                return;
+            }
+
+            const oldPass = document.getElementById("aj_oldPass").value.trim();
+            const p1 = document.getElementById("aj_newPass1").value.trim();
+            const p2 = document.getElementById("aj_newPass2").value.trim();
+
+            passMsg.textContent = "";
+            passMsg.style.color = "#111827";
+
+            if (!oldPass || !p1 || !p2) {
+                passMsg.textContent = "⚠️ Completa todos los campos.";
+                passMsg.style.color = "#b91c1c";
+                return;
+            }
+
+            if (p1 !== p2) {
+                passMsg.textContent = "⚠️ Las nuevas contraseñas no coinciden.";
+                passMsg.style.color = "#b91c1c";
+                return;
+            }
+
+            if (p1.length < 6) {
+                passMsg.textContent = "⚠️ La nueva contraseña debe tener al menos 6 caracteres.";
+                passMsg.style.color = "#b91c1c";
+                return;
+            }
+
+            if (!window.api?.updatePassword) {
+                alert("❌ Falta window.api.updatePassword en preload.js");
+                return;
+            }
+
+            const res = await window.api.updatePassword({
+                role,
+                id: userId,
+                oldPassword: oldPass,
+                newPassword: p1
+            });
+
+            if (!res?.success) {
+                passMsg.textContent = "❌ " + (res?.message || "No se pudo cambiar.");
+                passMsg.style.color = "#b91c1c";
+                return;
+            }
+
+            document.getElementById("aj_oldPass").value = "";
+            document.getElementById("aj_newPass1").value = "";
+            document.getElementById("aj_newPass2").value = "";
+
+            passMsg.textContent = "✅ Contraseña actualizada correctamente.";
+            passMsg.style.color = "#15803d";
+
+        } catch (e) {
+            console.error(e);
+            passMsg.textContent = "❌ Error cambiando contraseña. Mira consola (F12).";
+            passMsg.style.color = "#b91c1c";
+        }
+    };
+
+    // ----------------------
+    // Preferencias (local)
+    // ----------------------
+    const prefsMsg = document.getElementById("prefsMsg");
+
+    document.getElementById("btnGuardarPrefs").onclick = () => {
+        localStorage.setItem("pref_notifs", aj_notifs.value);
+        localStorage.setItem("pref_formato_hora", aj_formatoHora.value);
+        alert("✅ Preferencias guardadas.");
+    };
+
+    // ----------------------
+    // Sesión / datos
+    // ----------------------
+    document.getElementById("btnLimpiarSeleccion").onclick = () => {
+        localStorage.removeItem("seleccion_empresa");
+        localStorage.removeItem("seleccion_trabajador");
+        alert("✅ Selección eliminada.");
+        renderAjustes(main);
+    };
+
+    document.getElementById("btnBorrarLocal").onclick = () => {
+        ["pref_tema", "pref_notifs", "pref_formato_hora"].forEach(k => localStorage.removeItem(k));
+        alert("✅ Preferencias locales borradas.");
+        renderAjustes(main);
+    };
+
+    document.getElementById("btnCerrarSesion").onclick = () => logout();
+}
+
+
 
 // ======================
 // LOGOUT

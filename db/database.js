@@ -1,161 +1,137 @@
+// db/database.js
 const sqlite3 = require("sqlite3").verbose();
 const path = require("path");
 
 const dbPath = path.join(__dirname, "data.db");
 const db = new sqlite3.Database(dbPath, (err) => {
   if (err) console.error("❌ Error abriendo BD:", err);
+  else console.log("✅ BD abierta:", dbPath);
 });
 
-// Helpers ------------------------------------------------
-function run(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.run(sql, params, function (err) {
-      if (err) return reject(err);
-      resolve(this);
-    });
-  });
-}
+db.serialize(() => {
+  // =========================
+  // CONFIG
+  // =========================
+  db.run("PRAGMA foreign_keys = ON");
 
-function all(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.all(sql, params, (err, rows) => {
-      if (err) return reject(err);
-      resolve(rows || []);
-    });
-  });
-}
+  // =========================
+  // EMPRESAS
+  // =========================
+  db.run(`
+    CREATE TABLE IF NOT EXISTS empresas (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      nombre TEXT NOT NULL,
+      direccion TEXT,
+      telefono TEXT,
+      imagen TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
 
-async function ensureColumn(table, column, definition) {
-  const cols = await all(`PRAGMA table_info(${table})`);
-  const names = cols.map((c) => c.name);
-  if (!names.includes(column)) {
-    await run(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
-  }
-}
+  // =========================
+  // ADMINS
+  // =========================
+  db.run(`
+    CREATE TABLE IF NOT EXISTS admins (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT UNIQUE NOT NULL,
+      email TEXT,
+      password TEXT NOT NULL,
+      imagen TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
 
-// Init ---------------------------------------------------
-db.serialize(async () => {
-  try {
-    await run("PRAGMA foreign_keys = ON");
+  // =========================
+  // TRABAJADORES
+  // =========================
+  db.run(`
+    CREATE TABLE IF NOT EXISTS trabajadores (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT UNIQUE NOT NULL,
+      email TEXT,
+      password TEXT NOT NULL,
+      imagen TEXT,
+      empresa_id INTEGER,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (empresa_id) REFERENCES empresas(id) ON DELETE SET NULL
+    )
+  `);
 
-    // ======================================================
-    //   EMPRESAS
-    // ======================================================
-    await run(`
-      CREATE TABLE IF NOT EXISTS empresas (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        nombre TEXT NOT NULL,
-        direccion TEXT,
-        telefono TEXT,
-        imagen TEXT,
-        created_at TEXT DEFAULT (datetime('now'))
-      )
-    `);
+  // =========================
+  // CLIENTES
+  // - Puede ser "cliente cuenta" (login) o "cliente agenda" (solo nombre/teléfono)
+  // =========================
+db.run(`
+  CREATE TABLE IF NOT EXISTS clientes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE NOT NULL,
+    email TEXT,
+    password TEXT NOT NULL,
+    imagen TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+  )
+`);
 
-    // ======================================================
-    //   USERS (empleados / admin)
-    // ======================================================
-    await run(`
-      CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT UNIQUE NOT NULL,
-        email TEXT,
-        password TEXT NOT NULL,
-        role TEXT NOT NULL DEFAULT 'empleado', -- admin | empleado
-        imagen TEXT,
-        empresa_id INTEGER,
-        created_at TEXT DEFAULT (datetime('now')),
-        FOREIGN KEY (empresa_id) REFERENCES empresas(id) ON DELETE SET NULL
-      )
-    `);
 
-    // Por si tu BD ya existía con menos columnas:
-    await ensureColumn("users", "email", "TEXT");
-    await ensureColumn("users", "role", "TEXT NOT NULL DEFAULT 'empleado'");
-    await ensureColumn("users", "imagen", "TEXT");
-    await ensureColumn("users", "empresa_id", "INTEGER");
-    await ensureColumn("users", "created_at", "TEXT DEFAULT (datetime('now'))");
+  // =========================
+  // CITAS
+  // =========================
+  db.run(`
+    CREATE TABLE IF NOT EXISTS citas (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
 
-    // ======================================================
-    //   CLIENTES (nuevo)
-    // ======================================================
-    await run(`
-      CREATE TABLE IF NOT EXISTS clientes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        empresa_id INTEGER NOT NULL,
-        nombre TEXT NOT NULL,
-        telefono TEXT,
-        email TEXT,
-        nota TEXT,
-        created_at TEXT DEFAULT (datetime('now')),
-        FOREIGN KEY (empresa_id) REFERENCES empresas(id) ON DELETE CASCADE
-      )
-    `);
+      empresa_id INTEGER NOT NULL,
+      trabajador_id INTEGER NOT NULL,
+      cliente_id INTEGER,
 
-    // ======================================================
-    //   CITAS (normalizado)
-    // ======================================================
-    await run(`
-      CREATE TABLE IF NOT EXISTS citas (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        empresa_id INTEGER NOT NULL,
-        trabajador_id INTEGER,          -- user.id
-        cliente_id INTEGER,             -- clientes.id (puede ser null si reservas rápida)
-        fecha TEXT NOT NULL,            -- YYYY-MM-DD
-        hora TEXT NOT NULL,             -- HH:MM
-        duracion_min INTEGER DEFAULT 30,
-        estado TEXT NOT NULL DEFAULT 'reservado', -- reservado | cancelado
-        nota TEXT,
-        created_at TEXT DEFAULT (datetime('now')),
+      fecha TEXT NOT NULL,         -- YYYY-MM-DD
+      hora TEXT NOT NULL,          -- HH:MM
+      duracion_min INTEGER DEFAULT 30,
 
-        FOREIGN KEY (empresa_id) REFERENCES empresas(id) ON DELETE CASCADE,
-        FOREIGN KEY (trabajador_id) REFERENCES users(id) ON DELETE SET NULL,
-        FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE SET NULL
-      )
-    `);
+      telefono TEXT,
+      nota TEXT,
+      estado TEXT DEFAULT 'reservado', -- reservado | cancelada | completada
 
-    // Si tu tabla citas venía de antes, añadimos columnas sin romper
-    await ensureColumn("citas", "empresa_id", "INTEGER");
-    await ensureColumn("citas", "trabajador_id", "INTEGER");
-    await ensureColumn("citas", "cliente_id", "INTEGER");
-    await ensureColumn("citas", "duracion_min", "INTEGER DEFAULT 30");
-    await ensureColumn("citas", "estado", "TEXT NOT NULL DEFAULT 'reservado'");
-    await ensureColumn("citas", "nota", "TEXT");
-    await ensureColumn("citas", "created_at", "TEXT DEFAULT (datetime('now'))");
+      created_at TEXT DEFAULT (datetime('now')),
 
-    // ======================================================
-    //   ÍNDICES (rendimiento)
-    // ======================================================
-    await run(`CREATE INDEX IF NOT EXISTS idx_users_empresa ON users(empresa_id)`);
-    await run(`CREATE INDEX IF NOT EXISTS idx_clientes_empresa ON clientes(empresa_id)`);
-    await run(`CREATE INDEX IF NOT EXISTS idx_citas_empresa_fecha ON citas(empresa_id, fecha)`);
-    await run(`CREATE INDEX IF NOT EXISTS idx_citas_trabajador ON citas(trabajador_id)`);
+      FOREIGN KEY (empresa_id) REFERENCES empresas(id) ON DELETE CASCADE,
+      FOREIGN KEY (trabajador_id) REFERENCES trabajadores(id) ON DELETE CASCADE,
+      FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE SET NULL
+    )
+      
+  `);
 
-    // ======================================================
-    //   REGLA: no doble reserva
-    //   (misma empresa + trabajador + fecha + hora)
-    // ======================================================
-    await run(`
-      CREATE UNIQUE INDEX IF NOT EXISTS ux_citas_slot
-      ON citas(empresa_id, trabajador_id, fecha, hora)
-    `);
-
-    db.all("PRAGMA table_info(citas)", (err, rows) => {
+  db.all("PRAGMA table_info(citas)", (err, rows) => {
   if (err) return;
 
   const cols = rows.map(r => r.name);
 
-  if (!cols.includes("estado")) {
-    db.run("ALTER TABLE citas ADD COLUMN estado TEXT DEFAULT 'reservado'");
-    console.log("✔ estado añadido a citas");
+  if (!cols.includes("updated_at")) {
+    db.run("ALTER TABLE citas ADD COLUMN updated_at TEXT");
+    console.log("✔ updated_at añadido a citas");
   }
 });
 
 
-    console.log("✅ Base de datos conectada");
-  } catch (e) {
-    console.error("❌ Error inicializando BD:", e);
-  }
+  // =========================
+  // INDICES
+  // =========================
+  db.run(`CREATE INDEX IF NOT EXISTS idx_trabajadores_empresa ON trabajadores(empresa_id)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_clientes_empresa ON clientes(empresa_id)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_citas_empresa_fecha ON citas(empresa_id, fecha)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_citas_trabajador_fecha ON citas(trabajador_id, fecha)`);
+
+  // =========================
+  // UNIQUE SLOT (evita doble reserva)
+  // misma empresa + trabajador + fecha + hora
+  // =========================
+  db.run(`
+    CREATE UNIQUE INDEX IF NOT EXISTS ux_citas_slot
+    ON citas(empresa_id, trabajador_id, fecha, hora)
+  `);
+
+  console.log("✔ Tablas y índices listos (admins / trabajadores / clientes / empresas / citas)");
 });
 
 module.exports = db;

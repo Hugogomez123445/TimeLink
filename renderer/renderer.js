@@ -16,7 +16,6 @@ const passwordError = document.getElementById("passwordError");
 const strengthContainer = document.getElementById("passwordStrength");
 const strengthBar = document.getElementById("strengthBar");
 
-
 // Helper loader
 function setLoading(loading) {
   if (loading) {
@@ -30,9 +29,19 @@ function setLoading(loading) {
   }
 }
 
-// Cambiar entre login y registro
+// Guardar sesión (común)
+function saveSession(user, role) {
+  localStorage.setItem("userId", user.id);
+  localStorage.setItem("username", user.username || user.nombre || "");
+  localStorage.setItem("email", user.email || "");
+  localStorage.setItem("role", role);
+  localStorage.setItem("imagen", user.imagen || "");
+  if (user.empresa_id != null) localStorage.setItem("empresa_id", user.empresa_id);
+}
+
+// Cambiar entre login y registro (solo CLIENTE)
 toggleText.addEventListener("click", () => {
-  if (isAdminMode) return; // El admin no puede registrarse
+  if (isAdminMode) return;
 
   const container = document.querySelector(".container");
   container.style.opacity = "0.5";
@@ -59,7 +68,7 @@ toggleText.addEventListener("click", () => {
   }, 150);
 });
 
-// Acción: login / registro
+// Acción principal: LOGIN/REGISTER CLIENTE
 actionBtn.addEventListener("click", async () => {
   const username = document.getElementById("username").value.trim();
   const password = passwordInput.value.trim();
@@ -70,65 +79,30 @@ actionBtn.addEventListener("click", async () => {
     return;
   }
 
-  // --- LOGIN ADMIN NORMAL (Inicia sesión pero con rol admin)
-  if (isAdminMode) {
-    const result = await window.api.loginUser({ username, password });
-
-    if (!result.success) {
-      alert("Credenciales de administrador incorrectas.");
-      return;
-    }
-
-    if (result.user.role !== "admin") {
-      alert("Este usuario no es administrador.");
-      return;
-    }
-
-    // Guardar info admin
-    localStorage.setItem("userId", result.user.id);
-    localStorage.setItem("username", result.user.username);
-    localStorage.setItem("email", result.user.email);
-    localStorage.setItem("role", result.user.role);
-    localStorage.setItem("imagen", user.imagen || "");
-
-
-    window.location.href = "./main/mainApp.html";
-    return;
-  }
+  // Si estás en modo Admin (no deberías llegar aquí porque el admin tiene su popup),
+  // pero lo dejamos por seguridad.
+  if (isAdminMode) return;
 
   // ========== LOGIN CLIENTE ==========
   if (isLogin) {
     try {
       setLoading(true);
-      const result = await window.api.loginUser({ username, password });
+
+      if (!window.api?.loginCliente) {
+        alert("Falta loginCliente en preload.js");
+        return;
+      }
+
+      const result = await window.api.loginCliente({ username, password });
 
       if (result.success) {
-
-        if (result.user.role === "admin") {
-          alert("Los administradores deben iniciar sesión desde el Portal Admin.");
-          setLoading(false);
-          return;
-        }
-
-        if (result.user.role === "trabajador") {
-          alert("Los trabajadores deben iniciar sesión desde el Portal Trabajador.");
-          setLoading(false);
-          return;
-        }
-
-        // Guardar datos usuario normal
-        localStorage.setItem("userId", result.user.id);
-        localStorage.setItem("username", result.user.username);
-        localStorage.setItem("email", result.user.email);
-        localStorage.setItem("role", result.user.role);
-
+        saveSession(result.user, "cliente");
         window.location.href = "./main/mainApp.html";
-
       } else {
         const card = document.querySelector(".container");
         card.classList.add("shake");
         setTimeout(() => card.classList.remove("shake"), 400);
-        alert(result.message);
+        alert(result.message || "Credenciales incorrectas.");
       }
     } catch (err) {
       console.error(err);
@@ -138,8 +112,6 @@ actionBtn.addEventListener("click", async () => {
     }
   }
 
-
-
   // ========== REGISTRO CLIENTE ==========
   else {
     if (!email) {
@@ -147,7 +119,6 @@ actionBtn.addEventListener("click", async () => {
       return;
     }
 
-    // Validación contraseña
     let errors = [];
     if (password.length < 8) errors.push("• Mínimo 8 caracteres.");
     if (!/[0-9]/.test(password)) errors.push("• Debe contener un número.");
@@ -161,12 +132,13 @@ actionBtn.addEventListener("click", async () => {
 
     try {
       setLoading(true);
-      const result = await window.api.registerUser({
-        username,
-        email,
-        password,
-        role: "cliente"
-      });
+
+      if (!window.api?.registerCliente) {
+        alert("Falta registerCliente en preload.js");
+        return;
+      }
+
+      const result = await window.api.registerCliente({ username, email, password });
 
       if (result.success) {
         alert("Usuario registrado correctamente.");
@@ -175,8 +147,10 @@ actionBtn.addEventListener("click", async () => {
         btnText.textContent = "Entrar";
         toggleText.textContent = "¿No tienes cuenta? Regístrate";
         emailGroup.style.display = "none";
+        strengthContainer.style.display = "none";
+        passwordError.style.display = "none";
       } else {
-        alert(result.message);
+        alert(result.message || "No se pudo registrar.");
       }
     } catch (err) {
       console.error(err);
@@ -203,11 +177,7 @@ passwordInput.addEventListener("input", () => {
   if (/[!@#$%^&*(),.?\":{}|<>_\-]/.test(val)) strength++;
   if (/[A-Z]/.test(val)) strength++;
 
-  if (val.length > 0) {
-    strengthContainer.style.display = "block";
-  } else {
-    strengthContainer.style.display = "none";
-  }
+  strengthContainer.style.display = val.length ? "block" : "none";
 
   if (strength <= 1) {
     strengthBar.style.width = "33%";
@@ -223,6 +193,7 @@ passwordInput.addEventListener("input", () => {
 
 // --- POPUP ADMIN ---
 document.getElementById("adminAccess").addEventListener("click", () => {
+  document.getElementById("popupWorker").style.display = "none";
   document.getElementById("popupAdmin").style.display = "flex";
 });
 
@@ -231,7 +202,7 @@ document.getElementById("cancelAdmin").onclick = () => {
   document.getElementById("popupAdmin").style.display = "none";
 };
 
-// LOGIN ADMIN DESDE POPUP
+// LOGIN ADMIN
 document.getElementById("loginAdminBtn").addEventListener("click", async () => {
   const adminUser = document.getElementById("adminUser").value.trim();
   const adminPass = document.getElementById("adminPass").value.trim();
@@ -241,34 +212,29 @@ document.getElementById("loginAdminBtn").addEventListener("click", async () => {
     return;
   }
 
-  const result = await window.api.loginUser({ username: adminUser, password: adminPass });
+  if (!window.api?.loginAdmin) {
+    alert("Falta loginAdmin en preload.js");
+    return;
+  }
+
+  const result = await window.api.loginAdmin({ username: adminUser, password: adminPass });
 
   if (!result.success) {
-    alert("Credenciales incorrectas.");
+    alert(result.message || "Credenciales incorrectas.");
     return;
   }
 
-  if (result.user.role !== "admin") {
-    alert("Este usuario no es administrador.");
-    return;
-  }
-
-  // Guardar datos admin
-  localStorage.setItem("userId", result.user.id);
-  localStorage.setItem("username", result.user.username);
-  localStorage.setItem("email", result.user.email);
-  localStorage.setItem("role", result.user.role);
-
+  saveSession(result.user, "admin");
   window.location.href = "./main/mainApp.html";
-
 });
 
-// MOSTRAR POPUP TRABAJADOR
+// --- POPUP TRABAJADOR ---
 document.getElementById("workerAccess").addEventListener("click", () => {
+  document.getElementById("popupAdmin").style.display = "none";
   document.getElementById("popupWorker").style.display = "flex";
 });
 
-// CERRAR POPUP TRABAJADOR
+// Cerrar popup trabajador
 document.getElementById("cancelWorker").onclick = () => {
   document.getElementById("popupWorker").style.display = "none";
 };
@@ -283,39 +249,21 @@ document.getElementById("loginWorkerBtn").addEventListener("click", async () => 
     return;
   }
 
-  const result = await window.api.loginUser({ username: user, password: pass });
+  if (!window.api?.loginTrabajador) {
+    alert("Falta loginTrabajador en preload.js");
+    return;
+  }
+
+  const result = await window.api.loginTrabajador({ username: user, password: pass });
 
   if (!result.success) {
-    alert("Credenciales incorrectas.");
+    alert(result.message || "Credenciales incorrectas.");
     return;
   }
 
-  if (result.user.role !== "trabajador") {
-    alert("Este usuario no tiene acceso de trabajador.");
-    return;
-  }
-
-  // Guardar datos de sesión
-  localStorage.setItem("userId", result.user.id);
-  localStorage.setItem("username", result.user.username);
-  localStorage.setItem("email", result.user.email);
-  localStorage.setItem("role", result.user.role);
-
+  saveSession(result.user, "trabajador");
   window.location.href = "./main/mainApp.html";
 });
-
-document.getElementById("adminAccess").addEventListener("click", () => {
-  document.getElementById("popupWorker").style.display = "none"; // Cerrar otro
-  document.getElementById("popupAdmin").style.display = "flex";
-});
-
-document.getElementById("workerAccess").addEventListener("click", () => {
-  document.getElementById("popupAdmin").style.display = "none"; // Cerrar otro
-  document.getElementById("popupWorker").style.display = "flex";
-});
-
-
-
 
 // Mostrar / ocultar contraseña
 document.getElementById("togglePassword").addEventListener("click", () => {

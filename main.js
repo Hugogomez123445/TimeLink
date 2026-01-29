@@ -18,44 +18,127 @@ function createWindow() {
 
   win.loadFile(path.join(__dirname, "renderer/index.html"));
 }
-
 // ======================
-// LOGIN
+// LOGIN / REGISTRO (3 TABLAS)
 // ======================
 
-ipcMain.handle("login-user", (event, { username, password }) => {
+// ---- LOGIN ADMIN ----
+ipcMain.handle("login-admin", (event, { username, password }) => {
   return new Promise((resolve, reject) => {
     db.get(
-      "SELECT * FROM users WHERE username = ? AND password = ?",
+      "SELECT * FROM admins WHERE username = ? AND password = ?",
       [username, password],
       (err, row) => {
-        if (err) reject(err);
-        if (row) resolve({ success: true, user: row });
-        else resolve({ success: false, message: "Usuario o contraseña incorrectos." });
+        if (err) return reject(err);
+        if (row) return resolve({ success: true, user: row });
+        resolve({ success: false, message: "Administrador o contraseña incorrectos." });
       }
     );
   });
 });
 
-// ======================
-// REGISTRO
-// ======================
-
-ipcMain.handle("register-user", (event, { username, email, password }) => {
+// ---- LOGIN TRABAJADOR ----
+ipcMain.handle("login-trabajador", (event, { username, password }) => {
   return new Promise((resolve, reject) => {
+    db.get(
+      "SELECT * FROM trabajadores WHERE username = ? AND password = ?",
+      [username, password],
+      (err, row) => {
+        if (err) return reject(err);
+        if (row) return resolve({ success: true, user: row });
+        resolve({ success: false, message: "Trabajador o contraseña incorrectos." });
+      }
+    );
+  });
+});
+
+
+// ---- LOGIN CLIENTE ----
+ipcMain.handle("login-cliente", (event, { username, password }) => {
+  return new Promise((resolve, reject) => {
+    db.get(
+      "SELECT * FROM clientes WHERE username = ? AND password = ?",
+      [username, password],
+      (err, row) => {
+        if (err) return reject(err);
+        if (row) return resolve({ success: true, user: row });
+        resolve({ success: false, message: "Usuario o contraseña incorrectos." });
+      }
+    );
+  });
+});
+
+// ---- REGISTRO CLIENTE ----
+ipcMain.handle("register-cliente", (event, { username, email, password, nombre }) => {
+  return new Promise((resolve, reject) => {
+    const nombreFinal = (nombre && nombre.trim()) ? nombre.trim() : username;
+
     db.run(
-      "INSERT INTO users (username, email, password) VALUES (?, ?, ?)",
-      [username, email, password],
+      `INSERT INTO clientes (username, email, password, nombre)
+       VALUES (?, ?, ?, ?)`,
+      [username, email, password, nombreFinal],
       function (err) {
         if (err) {
-          if (err.message.includes("UNIQUE constraint failed"))
-            resolve({ success: false, message: "El usuario ya existe." });
-          else reject(err);
-        } else resolve({ success: true });
+          if (String(err.message).includes("UNIQUE"))
+            return resolve({ success: false, message: "El usuario ya existe." });
+          return reject(err);
+        }
+        resolve({ success: true, id: this.lastID });
       }
     );
   });
 });
+
+
+
+// ======================
+// CITAS (SEGURAS PARA TRABAJADOR)
+// ======================
+ipcMain.handle("get-citas-trabajador", async (event, { trabajador_id }) => {
+  return new Promise((resolve, reject) => {
+    if (!trabajador_id) return resolve([]);
+
+    // 1) Sacar empresa del trabajador (para evitar que el renderer la “invente”)
+    db.get(
+      `SELECT empresa_id FROM trabajadores WHERE id = ?`,
+      [trabajador_id],
+      (err, tr) => {
+        if (err) return reject(err);
+        if (!tr || !tr.empresa_id) return resolve([]);
+
+        const empresa_id = tr.empresa_id;
+
+        // 2) Traer SOLO citas de esa empresa + ese trabajador
+        const sql = `
+          SELECT 
+            c.id,
+            c.fecha,
+            c.hora,
+            c.estado,
+            c.nota,
+            c.empresa_id,
+            c.trabajador_id,
+            c.created_at,
+            c.updated_at,
+            cl.nombre AS cliente,
+            COALESCE(c.telefono, cl.telefono) AS telefono
+          FROM citas c
+          LEFT JOIN clientes cl ON cl.id = c.cliente_id
+          WHERE c.trabajador_id = ?
+            AND c.empresa_id = ?
+          ORDER BY COALESCE(c.updated_at, c.created_at) DESC
+        `;
+
+        db.all(sql, [trabajador_id, empresa_id], (e2, rows) => {
+          if (e2) return reject(e2);
+          resolve(rows || []);
+        });
+      }
+    );
+  });
+});
+
+
 
 // ======================
 // CITAS
@@ -71,11 +154,13 @@ ipcMain.handle("get-citas", async () => {
         c.nota,
         c.empresa_id,
         c.trabajador_id,
+        c.created_at,
+        c.updated_at,
         cl.nombre AS cliente,
         cl.telefono AS telefono
       FROM citas c
       LEFT JOIN clientes cl ON cl.id = c.cliente_id
-      ORDER BY c.fecha ASC, c.hora ASC
+      ORDER BY COALESCE(c.updated_at, c.created_at) DESC
     `;
     db.all(sql, [], (err, rows) => {
       if (err) return reject(err);
@@ -84,47 +169,91 @@ ipcMain.handle("get-citas", async () => {
   });
 });
 
+
 ipcMain.handle("add-cita", async (event, payload) => {
-  const { fecha, hora, cliente, telefono = "", nota = "", empresa_id = null, trabajador_id = null } = payload;
+  const {
+    fecha,
+    hora,
+    cliente,          // nombre escrito
+    telefono = "",
+    nota = "",
+    empresa_id,
+    trabajador_id
+  } = payload;
 
   return new Promise((resolve, reject) => {
-    // 1) Buscar cliente (por empresa + nombre + telefono)
+    if (!empresa_id || !trabajador_id || !fecha || !hora) {
+      return resolve({
+        success: false,
+        message: "Faltan datos obligatorios."
+      });
+    }
+
+    // 1️⃣ Buscar cliente EXISTENTE (solo para enlazar)
     const findClient = `
-      SELECT id FROM clientes 
-      WHERE empresa_id = ? AND nombre = ? AND IFNULL(telefono,'') = IFNULL(?, '')
+      SELECT id FROM clientes
+      WHERE nombre = ?
       LIMIT 1
     `;
 
-    db.get(findClient, [empresa_id, cliente, telefono], (err, row) => {
+    db.get(findClient, [cliente?.trim() || ""], (err, row) => {
       if (err) return reject(err);
 
-      const insertCita = (cliente_id) => {
-        const insert = `
-          INSERT INTO citas (empresa_id, trabajador_id, cliente_id, fecha, hora, duracion_min, estado, nota)
-          VALUES (?, ?, ?, ?, ?, 30, 'reservado', ?)
-        `;
-        db.run(insert, [empresa_id, trabajador_id, cliente_id, fecha, hora, nota], function (e2) {
-          if (e2) return reject(e2);
-          resolve({ success: true, id: this.lastID });
-        });
-      };
+      // 👉 si existe, usamos su id
+      // 👉 si NO existe, cliente_id = NULL
+      const cliente_id = row?.id ?? null;
 
-      if (row?.id) {
-        insertCita(row.id);
-      } else {
-        // 2) Crear cliente
-        const createClient = `
-          INSERT INTO clientes (empresa_id, nombre, telefono)
-          VALUES (?, ?, ?)
-        `;
-        db.run(createClient, [empresa_id, cliente, telefono], function (e3) {
-          if (e3) return reject(e3);
-          insertCita(this.lastID);
-        });
-      }
+      // 2️⃣ Insertar cita SIEMPRE
+      const insertCita = `
+        INSERT INTO citas (
+          empresa_id,
+          trabajador_id,
+          cliente_id,
+          fecha,
+          hora,
+          duracion_min,
+          estado,
+          nota,
+          telefono
+        )
+        VALUES (?, ?, ?, ?, ?, 30, 'reservado', ?, ?)
+      `;
+
+      db.run(
+        insertCita,
+        [
+          empresa_id,
+          trabajador_id,
+          cliente_id,
+          fecha,
+          hora,
+          nota,
+          telefono
+        ],
+        function (e2) {
+          if (e2) {
+            // ⛔ slot ocupado
+            if (String(e2.message).includes("UNIQUE constraint failed")) {
+              return resolve({
+                success: false,
+                message: "Esa hora ya está reservada."
+              });
+            }
+            return reject(e2);
+          }
+
+          resolve({
+            success: true,
+            id: this.lastID,
+            cliente_id
+          });
+        }
+      );
     });
   });
 });
+
+
 
 ipcMain.handle("delete-cita", async (event, citaId) => {
   return new Promise((resolve, reject) => {
@@ -254,67 +383,61 @@ ipcMain.handle("save-image", async (evt, { fileName, data }) => {
 // TRABAJADORES
 // =======================================
 
-
-
 ipcMain.handle("get-trabajadores", () => {
   return new Promise((resolve, reject) => {
     db.all(
       `SELECT 
-          users.id,
-          users.username,
-          users.email,
-          users.imagen,
-          users.empresa_id,
-          (SELECT nombre FROM empresas WHERE empresas.id = users.empresa_id) AS empresaNombre
-        FROM users 
-        WHERE role='trabajador'
+          t.id,
+          t.username,
+          t.email,
+          t.imagen,
+          t.empresa_id,
+          (SELECT nombre FROM empresas WHERE empresas.id = t.empresa_id) AS empresaNombre
+        FROM trabajadores t
       `,
       [],
       (err, rows) => {
         if (err) reject(err);
-        else resolve(rows);
+        else resolve(rows || []);
       }
     );
   });
 });
-
 
 ipcMain.handle("add-trabajador", (e, data) => {
   return new Promise((resolve, reject) => {
     db.run(
-      `INSERT INTO users (username, email, password, role, empresa_id, imagen)
-       VALUES (?, ?, ?, 'trabajador', ?, ?)`,
+      `INSERT INTO trabajadores (username, email, password, empresa_id, imagen)
+       VALUES (?, ?, ?, ?, ?)`,
       [data.username, data.email, data.password, data.empresa_id, data.imagen],
       function (err) {
-        if (err) reject(err);
-        else resolve({ id: this.lastID });
+        if (err) return reject(err);
+        resolve({ id: this.lastID });
       }
     );
   });
 });
-
 
 ipcMain.handle("update-trabajador", (e, data) => {
   return new Promise((resolve, reject) => {
     db.run(
-      `UPDATE users 
+      `UPDATE trabajadores 
        SET username=?, email=?, empresa_id=?, imagen=?
        WHERE id=?`,
       [data.username, data.email, data.empresa_id, data.imagen, data.id],
       function (err) {
-        if (err) reject(err);
-        else resolve(true);
+        if (err) return reject(err);
+        resolve(true);
       }
     );
   });
 });
 
-
 ipcMain.handle("delete-trabajador", (e, id) => {
   return new Promise((resolve, reject) => {
-    db.run(`DELETE FROM users WHERE id=?`, [id], err => {
-      if (err) reject(err);
-      else resolve(true);
+    db.run(`DELETE FROM trabajadores WHERE id=?`, [id], err => {
+      if (err) return reject(err);
+      resolve(true);
     });
   });
 });
@@ -344,7 +467,7 @@ ipcMain.handle("find-cita-cancelada", async (event, { empresa_id, trabajador_id,
 // Cambiar estado de cita
 ipcMain.handle("set-cita-estado", async (event, { id, estado }) => {
   return new Promise((resolve, reject) => {
-    const q = `UPDATE citas SET estado = ? WHERE id = ?`;
+    const q = `UPDATE citas SET estado = ?, updated_at = datetime('now') WHERE id = ?`;
     db.run(q, [estado, id], function (err) {
       if (err) return reject(err);
       resolve({ success: true, changes: this.changes });
@@ -352,6 +475,129 @@ ipcMain.handle("set-cita-estado", async (event, { id, estado }) => {
   });
 });
 
+
+
+
+
+
+ipcMain.handle("get-clientes", async () => {
+  return new Promise((resolve, reject) => {
+    db.all("SELECT * FROM clientes", [], (err, rows) => {
+      if (err) return reject(err);
+      resolve(rows || []);
+    });
+  });
+});
+
+
+// ======================
+// PERFIL: actualizar nombre/email/imagen (según rol)
+// ======================
+ipcMain.handle("update-profile", async (event, { role, id, username, email, nombre, imagen }) => {
+  return new Promise((resolve, reject) => {
+    if (!role || !id) return resolve({ success: false, message: "Faltan datos" });
+
+    // Normalizamos campos
+    const u = (username ?? "").trim();
+    const e = (email ?? "").trim();
+    const n = (nombre ?? "").trim();
+    const img = imagen ?? null;
+
+    if (role === "admin") {
+      // admins: username/email/imagen
+      db.run(
+        `UPDATE admins SET username = COALESCE(?, username),
+                           email = COALESCE(?, email),
+                           imagen = COALESCE(?, imagen)
+         WHERE id = ?`,
+        [u || null, e || null, img, id],
+        function (err) {
+          if (err) return reject(err);
+          resolve({ success: true, changes: this.changes });
+        }
+      );
+      return;
+    }
+
+    if (role === "trabajador") {
+      // trabajadores: username/email/imagen
+      db.run(
+        `UPDATE trabajadores SET username = COALESCE(?, username),
+                                 email = COALESCE(?, email),
+                                 imagen = COALESCE(?, imagen)
+         WHERE id = ?`,
+        [u || null, e || null, img, id],
+        function (err) {
+          if (err) return reject(err);
+          resolve({ success: true, changes: this.changes });
+        }
+      );
+      return;
+    }
+
+    if (role === "cliente") {
+      // clientes: nombre/email/imagen (ojo: tu tabla clientes NO tiene username)
+      // Si en tu UI usas "username" para cliente, lo guardamos como "nombre"
+      const nombreFinal = n || u; // si viene username, lo usamos como nombre
+      db.run(
+        `UPDATE clientes SET nombre = COALESCE(?, nombre),
+                             email = COALESCE(?, email),
+                             imagen = COALESCE(?, imagen)
+         WHERE id = ?`,
+        [nombreFinal || null, e || null, img, id],
+        function (err) {
+          if (err) return reject(err);
+          resolve({ success: true, changes: this.changes });
+        }
+      );
+      return;
+    }
+
+    resolve({ success: false, message: "Rol no válido" });
+  });
+});
+
+// ======================
+// PERFIL: cambiar contraseña (según rol)
+// ======================
+ipcMain.handle("update-password", async (event, { role, id, oldPassword, newPassword }) => {
+  return new Promise((resolve, reject) => {
+    if (!role || !id) return resolve({ success: false, message: "Faltan datos." });
+    if (!oldPassword || !newPassword) return resolve({ success: false, message: "Completa todos los campos." });
+
+    const oldP = String(oldPassword);
+    const newP = String(newPassword);
+
+    // tabla según rol
+    const table =
+      role === "admin" ? "admins" :
+      role === "trabajador" ? "trabajadores" :
+      role === "cliente" ? "clientes" :
+      null;
+
+    if (!table) return resolve({ success: false, message: "Rol no válido." });
+
+    // 1) comprobar contraseña actual
+    db.get(
+      `SELECT id FROM ${table} WHERE id = ? AND password = ?`,
+      [id, oldP],
+      (err, row) => {
+        if (err) return reject(err);
+        if (!row) return resolve({ success: false, message: "La contraseña actual no es correcta." });
+
+        // 2) actualizar
+        db.run(
+          `UPDATE ${table} SET password = ? WHERE id = ?`,
+          [newP, id],
+          function (err2) {
+            if (err2) return reject(err2);
+            resolve({ success: true, changes: this.changes });
+          }
+        );
+      }
+    );
+  });
+});
 
 
 // ======================
