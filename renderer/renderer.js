@@ -3,6 +3,7 @@ console.log("window.api =", window.api);
 
 let isLogin = true;
 let isAdminMode = false;
+let isWorkerRegister = false;
 
 const title = document.getElementById("title");
 const actionBtn = document.getElementById("actionBtn");
@@ -15,6 +16,15 @@ const passwordInput = document.getElementById("password");
 const passwordError = document.getElementById("passwordError");
 const strengthContainer = document.getElementById("passwordStrength");
 const strengthBar = document.getElementById("strengthBar");
+
+// ✅ Caja de portales (admin/trabajador/registro trabajador)
+const accessButtons = document.getElementById("accessButtons");
+
+// --- Popup trabajador refs ---
+const workerPopupTitle = document.getElementById("workerPopupTitle");
+const workerEmail = document.getElementById("workerEmail");
+const toggleWorkerMode = document.getElementById("toggleWorkerMode");
+const loginWorkerBtn = document.getElementById("loginWorkerBtn");
 
 // Helper loader
 function setLoading(loading) {
@@ -39,7 +49,13 @@ function saveSession(user, role) {
   if (user.empresa_id != null) localStorage.setItem("empresa_id", user.empresa_id);
 }
 
-// Cambiar entre login y registro (solo CLIENTE)
+// ✅ Helper: mostrar/ocultar portales según estado
+function syncPortalesUI() {
+  if (!accessButtons) return;
+  accessButtons.style.display = isLogin ? "flex" : "none";
+}
+
+// Cambiar entre login y registro (CLIENTE)
 toggleText.addEventListener("click", () => {
   if (isAdminMode) return;
 
@@ -53,6 +69,7 @@ toggleText.addEventListener("click", () => {
       title.textContent = "Iniciar Sesión";
       btnText.textContent = "Entrar";
       toggleText.textContent = "¿No tienes cuenta? Regístrate";
+
       emailGroup.style.display = "none";
       strengthContainer.style.display = "none";
       passwordError.style.display = "none";
@@ -60,9 +77,13 @@ toggleText.addEventListener("click", () => {
       title.textContent = "Crear Cuenta";
       btnText.textContent = "Registrarse";
       toggleText.textContent = "¿Ya tienes cuenta? Inicia sesión";
+
       emailGroup.style.display = "block";
       strengthContainer.style.display = "block";
     }
+
+    // ✅ Portales: login sí, registro no
+    syncPortalesUI();
 
     container.style.opacity = "1";
   }, 150);
@@ -79,11 +100,9 @@ actionBtn.addEventListener("click", async () => {
     return;
   }
 
-  // Si estás en modo Admin (no deberías llegar aquí porque el admin tiene su popup),
-  // pero lo dejamos por seguridad.
   if (isAdminMode) return;
 
-  // ========== LOGIN CLIENTE ==========
+  // LOGIN CLIENTE
   if (isLogin) {
     try {
       setLoading(true);
@@ -112,7 +131,7 @@ actionBtn.addEventListener("click", async () => {
     }
   }
 
-  // ========== REGISTRO CLIENTE ==========
+  // REGISTRO CLIENTE
   else {
     if (!email) {
       alert("Introduce tu correo electrónico.");
@@ -142,13 +161,19 @@ actionBtn.addEventListener("click", async () => {
 
       if (result.success) {
         alert("Usuario registrado correctamente.");
+
+        // volver a login automáticamente
         isLogin = true;
+
         title.textContent = "Iniciar Sesión";
         btnText.textContent = "Entrar";
         toggleText.textContent = "¿No tienes cuenta? Regístrate";
         emailGroup.style.display = "none";
         strengthContainer.style.display = "none";
         passwordError.style.display = "none";
+
+        // ✅ portales vuelven a mostrarse
+        syncPortalesUI();
       } else {
         alert(result.message || "No se pudo registrar.");
       }
@@ -161,7 +186,7 @@ actionBtn.addEventListener("click", async () => {
   }
 });
 
-// Fuerza de contraseña
+// Fuerza de contraseña (solo en registro cliente)
 passwordInput.addEventListener("input", () => {
   if (isLogin || isAdminMode) {
     passwordError.style.display = "none";
@@ -197,32 +222,21 @@ document.getElementById("adminAccess").addEventListener("click", () => {
   document.getElementById("popupAdmin").style.display = "flex";
 });
 
-// Cerrar popup admin
 document.getElementById("cancelAdmin").onclick = () => {
   document.getElementById("popupAdmin").style.display = "none";
 };
 
-// LOGIN ADMIN
 document.getElementById("loginAdminBtn").addEventListener("click", async () => {
   const adminUser = document.getElementById("adminUser").value.trim();
   const adminPass = document.getElementById("adminPass").value.trim();
 
-  if (!adminUser || !adminPass) {
-    alert("Completa todos los campos.");
-    return;
-  }
+  if (!adminUser || !adminPass) return alert("Completa todos los campos.");
 
-  if (!window.api?.loginAdmin) {
-    alert("Falta loginAdmin en preload.js");
-    return;
-  }
+  if (!window.api?.loginAdmin) return alert("Falta loginAdmin en preload.js");
 
   const result = await window.api.loginAdmin({ username: adminUser, password: adminPass });
 
-  if (!result.success) {
-    alert(result.message || "Credenciales incorrectas.");
-    return;
-  }
+  if (!result.success) return alert(result.message || "Credenciales incorrectas.");
 
   saveSession(result.user, "admin");
   window.location.href = "./main/mainApp.html";
@@ -232,34 +246,62 @@ document.getElementById("loginAdminBtn").addEventListener("click", async () => {
 document.getElementById("workerAccess").addEventListener("click", () => {
   document.getElementById("popupAdmin").style.display = "none";
   document.getElementById("popupWorker").style.display = "flex";
+
+  // reset modo
+  isWorkerRegister = false;
+  workerPopupTitle.textContent = "Acceso Trabajador";
+  workerEmail.style.display = "none";
+  loginWorkerBtn.textContent = "Entrar";
+  toggleWorkerMode.textContent = "¿No tienes cuenta? Regístrate (pendiente de aprobación)";
 });
 
-// Cerrar popup trabajador
 document.getElementById("cancelWorker").onclick = () => {
   document.getElementById("popupWorker").style.display = "none";
 };
 
-// LOGIN TRABAJADOR
-document.getElementById("loginWorkerBtn").addEventListener("click", async () => {
+toggleWorkerMode.addEventListener("click", () => {
+  isWorkerRegister = !isWorkerRegister;
+
+  if (isWorkerRegister) {
+    workerPopupTitle.textContent = "Registro Trabajador";
+    workerEmail.style.display = "block";
+    loginWorkerBtn.textContent = "Solicitar alta";
+    toggleWorkerMode.textContent = "¿Ya tienes cuenta? Inicia sesión";
+  } else {
+    workerPopupTitle.textContent = "Acceso Trabajador";
+    workerEmail.style.display = "none";
+    loginWorkerBtn.textContent = "Entrar";
+    toggleWorkerMode.textContent = "¿No tienes cuenta? Regístrate (pendiente de aprobación)";
+  }
+});
+
+loginWorkerBtn.addEventListener("click", async () => {
   const user = document.getElementById("workerUser").value.trim();
   const pass = document.getElementById("workerPass").value.trim();
+  const email = document.getElementById("workerEmail").value.trim();
 
-  if (!user || !pass) {
-    alert("Completa todos los campos.");
+  if (!user || !pass) return alert("Completa usuario y contraseña.");
+
+  // REGISTRO trabajador
+  if (isWorkerRegister) {
+    if (!email) return alert("Introduce un email.");
+    if (!window.api?.registerTrabajador) return alert("Falta registerTrabajador en preload.js");
+
+    const res = await window.api.registerTrabajador({ username: user, email, password: pass });
+
+    if (!res.success) return alert(res.message || "No se pudo registrar.");
+
+    alert("✅ Solicitud enviada. Un administrador debe aprobar tu cuenta.");
+    document.getElementById("popupWorker").style.display = "none";
     return;
   }
 
-  if (!window.api?.loginTrabajador) {
-    alert("Falta loginTrabajador en preload.js");
-    return;
-  }
+  // LOGIN trabajador
+  if (!window.api?.loginTrabajador) return alert("Falta loginTrabajador en preload.js");
 
   const result = await window.api.loginTrabajador({ username: user, password: pass });
 
-  if (!result.success) {
-    alert(result.message || "Credenciales incorrectas.");
-    return;
-  }
+  if (!result.success) return alert(result.message || "Credenciales incorrectas.");
 
   saveSession(result.user, "trabajador");
   window.location.href = "./main/mainApp.html";
@@ -271,3 +313,6 @@ document.getElementById("togglePassword").addEventListener("click", () => {
   passwordInput.type = hidden ? "text" : "password";
   togglePassword.textContent = hidden ? "🙈" : "👁️";
 });
+
+// ✅ Inicial: estamos en login => mostrar portales
+syncPortalesUI();

@@ -16,20 +16,28 @@ module.exports = (ipcMain) => {
     });
   });
 
-  // ---- LOGIN TRABAJADOR ----
-  ipcMain.handle("login-trabajador", (event, { username, password }) => {
-    return new Promise((resolve, reject) => {
-      db.get(
-        "SELECT * FROM trabajadores WHERE username = ? AND password = ?",
-        [username, password],
-        (err, row) => {
-          if (err) return reject(err);
-          if (row) return resolve({ success: true, user: row });
-          resolve({ success: false, message: "Trabajador o contraseña incorrectos." });
+// ---- LOGIN TRABAJADOR ----
+ipcMain.handle("login-trabajador", (event, { username, password }) => {
+  return new Promise((resolve, reject) => {
+    db.get(
+      "SELECT * FROM trabajadores WHERE username = ? AND password = ?",
+      [username, password],
+      (err, row) => {
+        if (err) return reject(err);
+        if (!row) return resolve({ success: false, message: "Trabajador o contraseña incorrectos." });
+
+        if ((row.estado || "pendiente") !== "aprobado") {
+          return resolve({ success: false, message: "Tu cuenta está pendiente de aprobación por un administrador." });
         }
-      );
-    });
+
+        resolve({ success: true, user: row });
+      }
+    );
   });
+});
+
+
+
 
   // ---- LOGIN CLIENTE ----
   ipcMain.handle("login-cliente", (event, { username, password }) => {

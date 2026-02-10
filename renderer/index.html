@@ -305,26 +305,33 @@
 
     <div class="toggle" id="toggleText">¿No tienes cuenta? Regístrate</div>
 
-    <div class="access-buttons">
+    <div class="access-buttons" id="accessButtons">
       <button id="adminAccess" class="access-btn">Portal admin</button>
       <button id="workerAccess" class="access-btn">Portal trabajador</button>
     </div>
 
+
   </div>
 
-  <div id="popupWorker" class="popup-overlay">
-    <div class="popup-card">
-      <h2>Acceso Trabajador</h2>
+<div id="popupWorker" class="popup-overlay">
+  <div class="popup-card">
+    <h2 id="workerPopupTitle">Acceso Trabajador</h2>
 
-      <input id="workerUser" type="text" placeholder="Usuario">
-      <input id="workerPass" type="password" placeholder="Contraseña">
+    <input id="workerUser" type="text" placeholder="Usuario">
+    <input id="workerEmail" type="email" placeholder="Email" style="display:none;">
+    <input id="workerPass" type="password" placeholder="Contraseña">
 
-      <div class="popup-buttons">
-        <button id="cancelWorker" class="popup-btn-cancel">Cancelar</button>
-        <button id="loginWorkerBtn" class="popup-btn-confirm">Entrar</button>
-      </div>
+    <div style="margin-top:10px; font-size:13px; color:#2563eb; cursor:pointer;" id="toggleWorkerMode">
+      ¿No tienes cuenta? Regístrate (pendiente de aprobación)
+    </div>
+
+    <div class="popup-buttons">
+      <button id="cancelWorker" class="popup-btn-cancel">Cancelar</button>
+      <button id="loginWorkerBtn" class="popup-btn-confirm">Entrar</button>
     </div>
   </div>
+</div>
+
 
 
   <div id="popupAdmin" class="popup-overlay">
@@ -340,6 +347,8 @@
       </div>
     </div>
   </div>
+
+
 
   </div>
 

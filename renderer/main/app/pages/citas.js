@@ -2,25 +2,64 @@ import { state } from "../state.js";
 import { api } from "../api.js";
 
 export async function renderCitas(main) {
-  const role = state.role;
-  const userId = state.userId;
+  const role = (state.role || "").toLowerCase();
+  const userId = String(state.userId || "");
+  const username = (state.username || "").trim().toLowerCase();
+
+  const esAdmin = role === "admin";
+  const esTrabajador = role === "trabajador" || role === "trabajadores";
+  const esCliente = role === "cliente";
 
   let citas = [];
   let empresas = [];
   let trabajadores = [];
 
-  if (role === "trabajador") {
+  // ============================
+  // CARGA DATOS SEGÚN ROL
+  // ============================
+  if (esTrabajador) {
     citas = await api.getCitasTrabajador({ trabajador_id: userId });
-    trabajadores = await api.getTrabajadores();
     empresas = await api.getEmpresas();
+    trabajadores = await api.getTrabajadores();
   } else {
     citas = await api.getCitas("ALL");
     empresas = await api.getEmpresas();
     trabajadores = await api.getTrabajadores();
   }
 
+  // ============================
+  // FILTRO EXTRA CLIENTE:
+  // Solo sus citas + solo reservadas
+  // IMPORTANTE: tus citas muchas veces NO llevan cliente_id,
+  // así que usamos fallback por nombre (campo c.cliente)
+  // ============================
+  if (esCliente) {
+    citas = (citas || []).filter(c => {
+      const estado = (c.estado || "reservado").toLowerCase();
+
+      const cid = c.cliente_id != null ? String(c.cliente_id) : "";
+      const nombreCita = (c.cliente || "").trim().toLowerCase();
+
+      const dueño = (cid && cid === userId) || (!!nombreCita && nombreCita === username);
+
+      return dueño && estado === "reservado";
+    });
+  }
+
+  // ============================
+  // UI
+  // ============================
   main.innerHTML = `
     <h1>Citas 📝</h1>
+
+    ${esTrabajador ? `
+      <div style="display:flex; align-items:center; gap:10px; margin: 10px 0 0;">
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+          <input type="checkbox" id="toggleHistorial" />
+          <span>Ver historial (completadas)</span>
+        </label>
+      </div>
+    ` : ""}
 
     <div style="display:flex; gap:10px; flex-wrap:wrap; margin: 15px 0;">
       <input id="fFecha" type="date" style="padding:10px; border-radius:8px; border:1px solid #ddd;">
@@ -64,13 +103,22 @@ export async function renderCitas(main) {
     </div>
   `;
 
-  if (role === "trabajador") {
+  // Ocultar filtros según rol
+  if (esTrabajador) {
     document.getElementById("fEmpresa").style.display = "none";
     document.getElementById("fTrabajador").style.display = "none";
   }
 
+  if (esCliente) {
+    document.getElementById("fEmpresa").style.display = "none";
+    document.getElementById("fTrabajador").style.display = "none";
+    document.getElementById("fEstado").style.display = "none";
+    document.getElementById("fTexto").style.display = "none";
+  }
+
   const body = document.getElementById("tablaCitasBody");
 
+  // helpers
   function nombreEmpresa(id) {
     return empresas.find(e => String(e.id) === String(id))?.nombre || "—";
   }
@@ -78,7 +126,7 @@ export async function renderCitas(main) {
     return trabajadores.find(t => String(t.id) === String(id))?.username || "—";
   }
   function badgeEstado(estado) {
-    const e = estado || "reservado";
+    const e = (estado || "reservado").toLowerCase();
     const styles =
       e === "cancelada" ? "background:#e5e7eb;color:#374151;" :
       e === "completada" ? "background:#dcfce7;color:#166534;" :
@@ -86,11 +134,14 @@ export async function renderCitas(main) {
     return `<span style="padding:6px 10px; border-radius:999px; font-size:12px; ${styles}">${e}</span>`;
   }
 
+  // ============================
+  // PINTAR TABLA
+  // ============================
   function pintar(lista) {
     body.innerHTML = "";
 
     if (!lista || lista.length === 0) {
-      body.innerHTML = `<tr><td colspan="8" style="padding:14px;">No hay citas con esos filtros.</td></tr>`;
+      body.innerHTML = `<tr><td colspan="8" style="padding:14px;">No hay citas.</td></tr>`;
       return;
     }
 
@@ -98,7 +149,32 @@ export async function renderCitas(main) {
       .sort((a, b) => (a.fecha + a.hora).localeCompare(b.fecha + b.hora))
       .forEach(c => {
         const empresaId = c.empresa_id ?? c.empresaId;
-        const trabajadorId = c.trabajador_id ?? c.userId;
+        const trabajadorId = c.trabajador_id ?? c.userId ?? c.trabajadorId;
+        const estado = (c.estado || "reservado").toLowerCase();
+
+        let accionesHTML = "";
+
+        if (esCliente) {
+          // cliente: solo cancelar su cita reservada
+          accionesHTML = `<button data-id="${c.id}" data-accion="cancelar">🚫 Cancelar</button>`;
+        } else if (esTrabajador) {
+          if (estado === "completada") {
+            accionesHTML = `<button data-id="${c.id}" data-accion="borrar">🗑️</button>`;
+          } else {
+            accionesHTML = `
+              <button data-id="${c.id}" data-accion="completar">✅</button>
+              <button data-id="${c.id}" data-accion="cancelar">🚫</button>
+              <button data-id="${c.id}" data-accion="borrar">🗑️</button>
+            `;
+          }
+        } else {
+          // admin
+          accionesHTML = `
+            <button data-id="${c.id}" data-accion="completar">✅</button>
+            <button data-id="${c.id}" data-accion="cancelar">🚫</button>
+            <button data-id="${c.id}" data-accion="borrar">🗑️</button>
+          `;
+        }
 
         const tr = document.createElement("tr");
         tr.innerHTML = `
@@ -110,54 +186,74 @@ export async function renderCitas(main) {
           <td style="padding:12px; border-top:1px solid #eee;">${nombreEmpresa(empresaId)}</td>
           <td style="padding:12px; border-top:1px solid #eee;">${nombreTrabajador(trabajadorId)}</td>
           <td style="padding:12px; border-top:1px solid #eee; display:flex; gap:6px; flex-wrap:wrap;">
-            <button data-id="${c.id}" data-accion="completar">✅</button>
-            <button data-id="${c.id}" data-accion="cancelar">🚫</button>
-            <button data-id="${c.id}" data-accion="borrar">🗑️</button>
+            ${accionesHTML}
           </td>
         `;
         body.appendChild(tr);
       });
 
+    // estilos + handlers
     body.querySelectorAll("button").forEach(btn => {
       btn.style.border = "1px solid #ddd";
       btn.style.borderRadius = "8px";
       btn.style.padding = "6px 10px";
       btn.style.cursor = "pointer";
+      btn.style.background = "white";
 
       btn.onclick = async () => {
         const id = btn.getAttribute("data-id");
         const accion = btn.getAttribute("data-accion");
 
-        if (accion === "completar") await api.setCitaEstado({ id, estado: "completada" });
-        if (accion === "cancelar") await api.setCitaEstado({ id, estado: "cancelada" });
+        if (accion === "completar") {
+          await api.setCitaEstado({ id, estado: "completada" });
+        }
+
+        if (accion === "cancelar") {
+          await api.setCitaEstado({ id, estado: "cancelada" });
+        }
+
         if (accion === "borrar") {
           if (!confirm("¿Eliminar definitivamente la cita?")) return;
           await api.deleteCita(id);
         }
 
-        const nuevas = await api.getCitas("ALL");
-        aplicarFiltros(nuevas);
+        await recargarYAplicar();
       };
     });
   }
 
+  // ============================
+  // APLICAR FILTROS + HISTORIAL TRABAJADOR
+  // ============================
   function aplicarFiltros(lista) {
-    const fFecha = document.getElementById("fFecha").value;
-    const fEstado = document.getElementById("fEstado").value;
-    const fEmpresa = document.getElementById("fEmpresa").value;
-    const fTrabajador = document.getElementById("fTrabajador").value;
-    const fTexto = document.getElementById("fTexto").value.toLowerCase();
+    const fFecha = document.getElementById("fFecha")?.value || "";
+    const fEstado = document.getElementById("fEstado")?.value || "";
+    const fEmpresa = document.getElementById("fEmpresa")?.value || "";
+    const fTrabajador = document.getElementById("fTrabajador")?.value || "";
+    const fTexto = (document.getElementById("fTexto")?.value || "").toLowerCase();
+
+    const verHistorial = esTrabajador ? (document.getElementById("toggleHistorial")?.checked || false) : false;
 
     const filtrada = (lista || []).filter(c => {
       const empresaId = String(c.empresa_id ?? c.empresaId ?? "");
       const trabajadorId = String(c.trabajador_id ?? c.userId ?? "");
-      const estado = c.estado || "reservado";
+      const estado = (c.estado || "reservado").toLowerCase();
+
+      if (esTrabajador) {
+        if (!verHistorial && estado === "completada") return false;
+        if (verHistorial && estado !== "completada") return false;
+      }
 
       if (fFecha && c.fecha !== fFecha) return false;
-      if (fEstado && estado !== fEstado) return false;
-      if (fEmpresa && empresaId !== String(fEmpresa)) return false;
-      if (fTrabajador && trabajadorId !== String(fTrabajador)) return false;
-      if (fTexto && !(c.cliente || "").toLowerCase().includes(fTexto)) return false;
+
+      if (!esCliente && fEstado && estado !== fEstado) return false;
+
+      if (esAdmin) {
+        if (fEmpresa && empresaId !== String(fEmpresa)) return false;
+        if (fTrabajador && trabajadorId !== String(fTrabajador)) return false;
+      }
+
+      if (!esCliente && fTexto && !(c.cliente || "").toLowerCase().includes(fTexto)) return false;
 
       return true;
     });
@@ -165,12 +261,43 @@ export async function renderCitas(main) {
     pintar(filtrada);
   }
 
+  async function recargarYAplicar() {
+    if (esTrabajador) {
+      citas = await api.getCitasTrabajador({ trabajador_id: userId });
+    } else {
+      citas = await api.getCitas("ALL");
+    }
+
+    if (esCliente) {
+      citas = (citas || []).filter(c => {
+        const estado = (c.estado || "reservado").toLowerCase();
+
+        const cid = c.cliente_id != null ? String(c.cliente_id) : "";
+        const nombreCita = (c.cliente || "").trim().toLowerCase();
+
+        const dueño = (cid && cid === userId) || (!!nombreCita && nombreCita === username);
+
+        return dueño && estado === "reservado";
+      });
+    }
+
+    aplicarFiltros(citas);
+  }
+
+  // listeners
   ["fFecha", "fEstado", "fEmpresa", "fTrabajador", "fTexto"].forEach(id => {
-    document.getElementById(id).addEventListener("input", async () => {
-      const nuevas = await api.getCitas("ALL");
-      aplicarFiltros(nuevas);
-    });
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener("input", () => aplicarFiltros(citas));
   });
 
-  pintar(citas);
+  if (esTrabajador) {
+    document.getElementById("toggleHistorial")?.addEventListener("change", () => {
+      document.getElementById("fEstado").value = "";
+      aplicarFiltros(citas);
+    });
+  }
+
+  // primera carga
+  aplicarFiltros(citas);
 }

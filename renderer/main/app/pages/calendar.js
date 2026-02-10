@@ -9,6 +9,11 @@ let popupHora = "";
 let isEditing = false;
 let editingId = null;
 
+function isWorkerRole() {
+  const r = String(state.role || "").toLowerCase();
+  return r === "trabajador" || r === "trabajadores";
+}
+
 function getSelectedEmpresaId() {
   return localStorage.getItem("seleccion_empresa");
 }
@@ -41,9 +46,11 @@ function addCitaToCalendar(c) {
   });
 }
 
+/* =========================================================
+   MODO ADMIN/CLIENTE (como lo tienes): seleccionar empresa
+   ========================================================= */
 export async function seleccionarEmpresa(main) {
   const empresas = await api.getEmpresas();
-
   const defaultCompany = assetUrl("default_company.png");
 
   main.innerHTML = `
@@ -98,7 +105,15 @@ export function abrirCalendarioTrabajador(trabajadorId, empresaId) {
   renderCalendario(main);
 }
 
+/* =========================================================
+   CALENDARIO NORMAL (cliente/admin) - con reservas
+   ========================================================= */
 export async function renderCalendario(main) {
+  // Si es trabajador, forzamos modo solo lectura
+  if (isWorkerRole()) {
+    return abrirCalendarioTrabajadorActual(main);
+  }
+
   main.innerHTML = `
     <h1>Calendario 📅</h1>
     <div id="calendar" style="margin-top:20px;"></div>
@@ -240,6 +255,18 @@ export async function renderCalendario(main) {
       }
     }
 
+    function bindTelefono9Digitos() {
+      const telInput = document.getElementById("citaTelefono");
+      if (!telInput) return;
+
+      telInput.setAttribute("inputmode", "numeric");
+      telInput.setAttribute("maxlength", "9");
+
+      telInput.oninput = () => {
+        telInput.value = telInput.value.replace(/\D/g, "").slice(0, 9);
+      };
+    }
+
     function openNewCitaPopup(date, hour) {
       isEditing = false;
       editingId = null;
@@ -252,6 +279,7 @@ export async function renderCalendario(main) {
       document.getElementById("citaNota").value = "";
       document.getElementById("popupTitulo").textContent = "Nueva cita";
 
+      bindTelefono9Digitos();
       document.getElementById("popupCita").style.display = "flex";
     }
 
@@ -268,7 +296,7 @@ export async function renderCalendario(main) {
       document.getElementById("citaTelefono").value = ext.telefono || "";
       document.getElementById("citaNota").value = ext.nota || "";
 
-      document.getElementById("popupTitulo").textContent = "Editar cita";
+      bindTelefono9Digitos();
       document.getElementById("popupCita").style.display = "flex";
     }
 
@@ -284,13 +312,14 @@ export async function renderCalendario(main) {
       const empresaId = getSelectedEmpresaId();
 
       const cliente = document.getElementById("citaCliente").value.trim();
-      const telefono = document.getElementById("citaTelefono").value.trim();
+      const telRaw = document.getElementById("citaTelefono").value.trim();
+      const telefono = telRaw.replace(/\D/g, "");
       const nota = document.getElementById("citaNota").value.trim();
 
-      if (!cliente || !popupFecha || !popupHora) {
-        alert("Faltan datos.");
-        return;
-      }
+      if (!cliente) return alert("⚠️ Debes introducir tu nombre.");
+      if (!telefono) return alert("⚠️ Debes introducir tu teléfono.");
+      if (!/^\d{9}$/.test(telefono)) return alert("⚠️ El teléfono debe tener exactamente 9 dígitos.");
+      if (!popupFecha || !popupHora) return alert("Faltan datos (fecha/hora).");
 
       const payload = {
         id: editingId || null,
@@ -302,6 +331,7 @@ export async function renderCalendario(main) {
         estado: "reservado",
         userId: trabajadorId,
         trabajador_id: trabajadorId,
+        cliente_id: state.role === "cliente" ? state.userId : null,
         empresa_id: empresaId,
         username: state.username || ""
       };
@@ -325,8 +355,8 @@ export async function renderCalendario(main) {
         }
 
         document.getElementById("popupCita").style.display = "none";
-
         await loadAndPaintCitas();
+
         const d = hourPanel.dataset.date;
         if (d) generateHours(d);
 
@@ -345,6 +375,69 @@ export async function renderCalendario(main) {
       }
     };
   }, 50);
+}
+
+/* =========================================================
+   MODO TRABAJADOR: abrir directo + SOLO LECTURA
+   ========================================================= */
+export async function abrirCalendarioTrabajadorActual(main) {
+  main.innerHTML = `
+    <h1>Calendario 📅</h1>
+    <p style="margin-top:6px;color:#6b7280;">Solo lectura (tus citas reservadas)</p>
+    <div id="calendar" style="margin-top:20px;"></div>
+  `;
+
+  const calendarEl = document.getElementById("calendar");
+  const trabajadorId = state.userId;
+
+  calendar = new FullCalendar.Calendar(calendarEl, {
+    initialView: "dayGridMonth",
+    locale: "es",
+    firstDay: 1,
+    height: "auto",
+    selectable: false,      // ✅ NO seleccionar
+    editable: false,        // ✅ NO arrastrar
+    eventStartEditable: false,
+    eventDurationEditable: false,
+    headerToolbar: {
+      left: "prev,next today",
+      center: "title",
+      right: "dayGridMonth,timeGridWeek,timeGridDay",
+    },
+
+    // ✅ NO dateClick => no reserva
+    dateClick: null,
+
+    // ✅ eventClick solo muestra info (sin prompt)
+    eventClick: (info) => {
+      const c = info.event.extendedProps || {};
+      const estado = c.estado || "reservado";
+      alert(
+        `Cita\n\n` +
+        `Cliente: ${c.cliente || "—"}\n` +
+        `Teléfono: ${c.telefono || "—"}\n` +
+        `Fecha: ${c.fecha || info.event.startStr?.split("T")[0]}\n` +
+        `Hora: ${c.hora || info.event.start?.toTimeString()?.slice(0,5)}\n` +
+        `Estado: ${estado}\n` +
+        (c.nota ? `\nNota: ${c.nota}` : "")
+      );
+    }
+  });
+
+  calendar.render();
+
+  // ✅ cargar solo SUS citas
+  let citas = [];
+  if (api.getCitasTrabajador) {
+    citas = await api.getCitasTrabajador({ trabajador_id: trabajadorId });
+  } else {
+    // fallback por si acaso
+    const all = await api.getCitas("ALL");
+    citas = (all || []).filter(c => String(c.trabajador_id ?? c.userId) === String(trabajadorId));
+  }
+
+  calendar.removeAllEvents();
+  (citas || []).forEach(c => addCitaToCalendar(c));
 }
 
 window.renderCalendario = renderCalendario;

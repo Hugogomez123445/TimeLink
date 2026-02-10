@@ -3,24 +3,26 @@ import { loadSidebarAvatar } from "./helpers/dom.js";
 import { state } from "./state.js";
 import { navigate } from "./navigation/navigation.js";
 import { logout } from "./navigation/logout.js";
-import { cargarInicioAdmin, cargarInicioBasico } from "./pages/home.js";
+
+// ✅ si lo sigues usando en algún sitio, lo puedes mantener,
+// pero ya no hace falta llamarlo aquí
+import { cargarInicioAdmin, cargarInicioBasico, cargarInicioCliente } from "./pages/home.js";
 
 // Exponer para onclick del HTML
 window.navigate = navigate;
 window.logout = logout;
 
-function init() {
+async function init() {
   initHeaderAndPermissions();
   loadSidebarAvatar();
   initAdminSubmenuToggle();
 
-  // carga inicial
-  if (state.role === "admin") cargarInicioAdmin();
-  else cargarInicioBasico();
+  // ✅ carga inicial SIEMPRE por router
+  await navigate("inicio");
 }
 
 if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", init);
+  document.addEventListener("DOMContentLoaded", () => { init(); });
 } else {
   init();
 }

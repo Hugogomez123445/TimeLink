@@ -41,6 +41,14 @@ contextBridge.exposeInMainWorld("api", {
 
   getCitasTrabajador: (data) => ipcRenderer.invoke("get-citas-trabajador", data),
 
+  // REGISTRO trabajador (pendiente)
+  registerTrabajador: (data) => ipcRenderer.invoke("register-trabajador", data),
+
+  // aprobar trabajador (admin)
+  aprobarTrabajador: (id) => ipcRenderer.invoke("aprobar-trabajador", id),
+
+  // (opcional) listado solo pendientes (si quieres)
+  getTrabajadoresPendientes: () => ipcRenderer.invoke("get-trabajadores-pendientes"),
 
 
 });
