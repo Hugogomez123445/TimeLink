@@ -1,5 +1,6 @@
 import { state } from "../state.js";
 import { api } from "../api.js";
+import { notify } from "../helpers/notify.js";
 import { getAvatarHTML, assetUrl } from "../helpers/dom.js";
 
 let calendar = null;
@@ -13,6 +14,12 @@ function isWorkerRole() {
   const r = String(state.role || "").toLowerCase();
   return r === "trabajador" || r === "trabajadores";
 }
+function isClienteRole() {
+  return String(state.role || "").toLowerCase() === "cliente";
+}
+function isAdminRole() {
+  return String(state.role || "").toLowerCase() === "admin";
+}
 
 function getSelectedEmpresaId() {
   return localStorage.getItem("seleccion_empresa");
@@ -22,8 +29,9 @@ function getSelectedTrabajadorId() {
 }
 
 function getColorByEstado(estado) {
-  if (estado === "cancelada") return "#9ca3af";
-  if (estado === "completada") return "#16a34a";
+  const e = String(estado || "reservado").toLowerCase();
+  if (e === "cancelada") return "#9ca3af";
+  if (e === "completada") return "#16a34a";
   return "#dc2626";
 }
 
@@ -32,12 +40,11 @@ function addCitaToCalendar(c) {
 
   const estado = c.estado || "reservado";
   const color = getColorByEstado(estado);
-
   const idReal = c.id ?? c.cita_id ?? c.citaId;
 
   calendar.addEvent({
     title: c.cliente || "Reservado",
-    start: (c.hora && c.hora.length === 5)
+    start: (c.hora && String(c.hora).length === 5)
       ? `${c.fecha}T${c.hora}:00`
       : `${c.fecha}T${c.hora}`,
     backgroundColor: color,
@@ -47,16 +54,19 @@ function addCitaToCalendar(c) {
 }
 
 /* =========================================================
-   MODO ADMIN/CLIENTE
+   MODO ADMIN/CLIENTE: seleccion empresa -> trabajador
    ========================================================= */
 export async function seleccionarEmpresa(main) {
+  // Si es trabajador, forzamos su calendario directamente
+  if (isWorkerRole()) return abrirCalendarioTrabajadorActual(main);
+
   const empresas = await api.getEmpresas();
   const defaultCompany = assetUrl("default_company.png");
 
   main.innerHTML = `
-    <h1>Seleciona una empresa</h1>
+    <h1>Selecciona una empresa 🏢</h1>
     <div class="empresa-grid">
-      ${empresas.map(e => `
+      ${(empresas || []).map(e => `
         <div class="empresa-card-view" onclick="seleccionarTrabajador(${e.id})">
           <img src="${e.imagen || defaultCompany}" class="empresa-img">
           <div class="empresa-info">
@@ -75,10 +85,10 @@ export async function seleccionarTrabajador(empresaId) {
   const main = document.getElementById("mainContent");
 
   const trabajadores = await api.getTrabajadores();
-  const lista = trabajadores.filter(t => String(t.empresa_id) === String(empresaId));
+  const lista = (trabajadores || []).filter(t => String(t.empresa_id) === String(empresaId));
 
   main.innerHTML = `
-    <h1>Selecciona un trabajador</h1>
+    <h1>Selecciona un trabajador 👷‍♂️</h1>
     <div class="empresa-grid">
       ${lista.map(t => `
         <div class="trabajador-card-view" onclick="abrirCalendarioTrabajador(${t.id}, ${empresaId})">
@@ -109,13 +119,11 @@ export function abrirCalendarioTrabajador(trabajadorId, empresaId) {
    CALENDARIO NORMAL (cliente/admin) - con reservas
    ========================================================= */
 export async function renderCalendario(main) {
-  // Si es trabajador, forzamos modo solo lectura
-  if (isWorkerRole()) {
-    return abrirCalendarioTrabajadorActual(main);
-  }
+  // Si es trabajador, solo lectura
+  if (isWorkerRole()) return abrirCalendarioTrabajadorActual(main);
 
   main.innerHTML = `
-    <h1>CALENDARIO</h1>
+    <h1>Calendario 📅</h1>
     <div id="calendar" style="margin-top:20px;"></div>
 
     <div id="hourPanel" class="hour-panel" style="display:none;">
@@ -132,6 +140,23 @@ export async function renderCalendario(main) {
     const empresaId = getSelectedEmpresaId();
     const trabajadorIdSel = getSelectedTrabajadorId();
 
+    // cache vacaciones del trabajador seleccionado (para bloquear)
+    let vacacionesSet = new Set();
+    async function cargarVacacionesTrabajadorSel() {
+      vacacionesSet = new Set();
+      if (!api.getVacaciones || !trabajadorIdSel) return;
+      try {
+        const vacs = await api.getVacaciones({ trabajador_id: trabajadorIdSel });
+        (vacs || []).forEach(v => {
+          if (v?.fecha) vacacionesSet.add(String(v.fecha));
+        });
+      } catch (e) {
+        console.warn("No se pudieron cargar vacaciones:", e);
+      }
+    }
+
+    await cargarVacacionesTrabajadorSel();
+
     calendar = new FullCalendar.Calendar(calendarEl, {
       initialView: "dayGridMonth",
       locale: "es",
@@ -144,14 +169,34 @@ export async function renderCalendario(main) {
         right: "dayGridMonth,timeGridWeek,timeGridDay",
       },
 
+      // ✅ click día -> horas (bloquea si vacaciones)
       dateClick(info) {
         generateHours(info.dateStr);
       },
 
+      // ✅ Cliente: solo ver info
+      // ✅ Admin: puede gestionar
       eventClick: async (info) => {
         const ev = info.event;
         const id = ev.extendedProps.id;
+        const ext = ev.extendedProps || {};
 
+        // Cliente: SOLO INFO
+        if (isClienteRole()) {
+          const estado = (ext.estado || "reservado");
+          alert(
+            `Cita\n\n` +
+            `Cliente: ${ext.cliente || "—"}\n` +
+            `Teléfono: ${ext.telefono || "—"}\n` +
+            `Fecha: ${ext.fecha || ev.startStr?.split("T")[0]}\n` +
+            `Hora: ${ext.hora || ev.start?.toTimeString()?.slice(0,5)}\n` +
+            `Estado: ${estado}\n` +
+            (ext.nota ? `\nNota: ${ext.nota}` : "")
+          );
+          return;
+        }
+
+        // Admin (o roles no cliente): gestión completa
         const opcion = prompt(
 `¿Qué desea hacer?
 1 = Marcar como COMPLETADA
@@ -211,7 +256,7 @@ export async function renderCalendario(main) {
     async function loadAndPaintCitas() {
       const citas = await api.getCitas("ALL");
 
-      const filtradas = citas.filter(c => {
+      const filtradas = (citas || []).filter(c => {
         const tId = c.trabajador_id ?? c.userId ?? c.trabajadorId;
         const eId = c.empresa_id ?? c.empresaId;
         const okTrab = String(tId) === String(trabajadorIdSel);
@@ -223,10 +268,24 @@ export async function renderCalendario(main) {
       filtradas.forEach(c => addCitaToCalendar(c));
     }
 
-    function generateHours(dateStr) {
+    // ✅ ahora es async para poder hacer await (vacaciones)
+    async function generateHours(dateStr) {
       hourList.innerHTML = "";
       hourPanel.style.display = "block";
       hourPanel.dataset.date = dateStr;
+
+      // ✅ BLOQUEO POR VACACIONES (día completo)
+      // refresca por si cambian desde otro sitio
+      await cargarVacacionesTrabajadorSel();
+
+      if (vacacionesSet.has(String(dateStr))) {
+        hourList.innerHTML = `
+          <div style="padding:12px;border:1px dashed #e5e7eb;border-radius:12px;background:#fff7ed;color:#9a3412;">
+            🏖️ Este día el trabajador está de vacaciones. <b>No se pueden reservar citas</b>.
+          </div>
+        `;
+        return;
+      }
 
       const ocupadas = calendar.getEvents()
         .filter(ev => {
@@ -321,6 +380,18 @@ export async function renderCalendario(main) {
       if (!/^\d{9}$/.test(telefono)) return alert("⚠️ El teléfono debe tener exactamente 9 dígitos.");
       if (!popupFecha || !popupHora) return alert("Faltan datos (fecha/hora).");
 
+      // ✅ SEGURIDAD EXTRA: re-check vacaciones justo antes de guardar
+      if (api.getVacaciones) {
+        try {
+          const vacs = await api.getVacaciones({ trabajador_id: trabajadorId });
+          const estaVac = (vacs || []).some(v => String(v.fecha) === String(popupFecha));
+          if (estaVac) {
+            alert("🏖️ Ese día el trabajador está de vacaciones. No puedes reservar.");
+            return;
+          }
+        } catch {}
+      }
+
       const payload = {
         id: editingId || null,
         fecha: popupFecha,
@@ -331,8 +402,12 @@ export async function renderCalendario(main) {
         estado: "reservado",
         userId: trabajadorId,
         trabajador_id: trabajadorId,
-        cliente_id: state.role === "cliente" ? state.userId : null,
         empresa_id: empresaId,
+
+        // ✅ para que luego el cliente vea sus citas
+        cliente_id: isClienteRole() ? state.userId : null,
+
+        // fallback
         username: state.username || ""
       };
 
@@ -357,11 +432,16 @@ export async function renderCalendario(main) {
         document.getElementById("popupCita").style.display = "none";
         await loadAndPaintCitas();
 
+        // ✅ Notificación SOLO cliente (solo cuando es NUEVA)
+        if (isClienteRole() && !isEditing) {
+          await notify("✅ Cita reservada", `Tu cita ha sido reservada para ${payload.fecha} a las ${payload.hora}.`);
+        }
+
         const d = hourPanel.dataset.date;
         if (d) generateHours(d);
 
       } catch (err) {
-        console.error("Error guardando cita:", err);
+        console.error("❌ Error guardando cita:", err);
 
         if (String(err?.message || "").includes("UNIQUE constraint failed")) {
           alert("⚠️ Esa hora ya está reservada.");
@@ -371,7 +451,7 @@ export async function renderCalendario(main) {
           return;
         }
 
-        alert("No se pudo guardar la cita. Mira la consola.");
+        alert("❌ No se pudo guardar la cita. Mira la consola.");
       }
     };
   }, 50);
@@ -382,8 +462,8 @@ export async function renderCalendario(main) {
    ========================================================= */
 export async function abrirCalendarioTrabajadorActual(main) {
   main.innerHTML = `
-    <h1>CALENDARIO</h1>
-    <p style="margin-top:6px;color:#6b7280;">Solo lectura (tus citas reservadas)</p>
+    <h1>Calendario 📅</h1>
+    <p style="margin-top:6px;color:#6b7280;">Solo lectura (tus citas)</p>
     <div id="calendar" style="margin-top:20px;"></div>
   `;
 
@@ -395,8 +475,8 @@ export async function abrirCalendarioTrabajadorActual(main) {
     locale: "es",
     firstDay: 1,
     height: "auto",
-    selectable: false,      
-    editable: false,        
+    selectable: false,
+    editable: false,
     eventStartEditable: false,
     eventDurationEditable: false,
     headerToolbar: {
@@ -405,10 +485,8 @@ export async function abrirCalendarioTrabajadorActual(main) {
       right: "dayGridMonth,timeGridWeek,timeGridDay",
     },
 
-    // NO dateClick => no reserva
     dateClick: null,
 
-    // eventClick solo muestra info (sin prompt)
     eventClick: (info) => {
       const c = info.event.extendedProps || {};
       const estado = c.estado || "reservado";
@@ -431,7 +509,6 @@ export async function abrirCalendarioTrabajadorActual(main) {
   if (api.getCitasTrabajador) {
     citas = await api.getCitasTrabajador({ trabajador_id: trabajadorId });
   } else {
-    // fallback por si acaso
     const all = await api.getCitas("ALL");
     citas = (all || []).filter(c => String(c.trabajador_id ?? c.userId) === String(trabajadorId));
   }

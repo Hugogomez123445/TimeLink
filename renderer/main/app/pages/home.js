@@ -13,6 +13,32 @@ export function cargarInicioBasico() {
 }
 
 /* =========================
+   HELPERS "NUEVAS CITAS" (TRABAJADOR)
+========================= */
+function seenKeyTrabajador() {
+  return `timelink_trabajador_seen_${state.userId}`;
+}
+
+// Convierte "YYYY-MM-DD HH:MM:SS" -> Date (SQLite)
+function parseDbDate(s) {
+  if (!s) return null;
+  const iso = String(s).replace(" ", "T");
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function getLastSeenTrabajador() {
+  const raw = localStorage.getItem(seenKeyTrabajador());
+  const d = raw ? new Date(raw) : null;
+  return d && !isNaN(d.getTime()) ? d : null;
+}
+
+// ✅ exportable para poder limpiarlo desde citas.js si quieres
+export function setLastSeenTrabajador(dateObj = new Date()) {
+  localStorage.setItem(seenKeyTrabajador(), dateObj.toISOString());
+}
+
+/* =========================
    INICIO ADMIN
 ========================= */
 export function cargarInicioAdmin() {
@@ -109,7 +135,7 @@ async function cargarGraficaSemanal(citas) {
     cantidades.push((citas || []).filter(c => c.fecha === fechaStr).length);
   }
 
-  if (!window.Chart) return; // por si no está cargado Chart.js
+  if (!window.Chart) return;
 
   new Chart(document.getElementById("graficaSemanal"), {
     type: "line",
@@ -132,12 +158,10 @@ async function cargarAlertasAdmin({ empresas, trabajadores, citas, pendientes })
 
   const alertas = [];
 
-  // 🔔 Trabajadores pendientes
   if ((pendientes || []).length > 0) {
     alertas.push(`Tienes ${pendientes.length} trabajadores pendientes de aprobación.`);
   }
 
-  // 👷‍♂️ Trabajadores aprobados sin empresa asignada
   const aprobados = (trabajadores || []).filter(t => (t.estado || "pendiente") === "aprobado");
   const sinEmpresa = aprobados.filter(t =>
     !t.empresa_id || !(empresas || []).some(e => String(e.id) === String(t.empresa_id))
@@ -146,7 +170,6 @@ async function cargarAlertasAdmin({ empresas, trabajadores, citas, pendientes })
     alertas.push(`${sinEmpresa.length} trabajadores aprobados no tienen empresa asignada.`);
   }
 
-  // 📝 Citas pasadas sin nota
   const hoy = new Date().toISOString().split("T")[0];
   const citasPasadasSinNota = (citas || []).filter(c =>
     c.fecha < hoy && (!c.nota || c.nota.trim() === "")
@@ -317,18 +340,20 @@ export async function cargarInicioCliente() {
 }
 
 /* =========================
-   INICIO TRABAJADOR
+   INICIO TRABAJADOR (badge + vacaciones)
 ========================= */
 export async function cargarInicioTrabajador() {
   const main = document.getElementById("mainContent");
 
   main.innerHTML = `
     <h1>PANEL DE TRABAJADOR</h1>
+    <p style="margin-top:-6px; color:#6b7280;">Resumen de tus citas y accesos rápidos.</p>
 
     <div class="dashboard-grid">
       <div class="dash-card">
         <h3>📌 Reservadas</h3>
         <p id="kpiReservadas">0</p>
+        <div id="badgeNuevasReservadas" style="margin-top:6px;"></div>
       </div>
 
       <div class="dash-card">
@@ -348,20 +373,62 @@ export async function cargarInicioTrabajador() {
     </div>
 
     <div class="panel-box">
-      <h2>🗓️ Mis próximas citas (reservadas)</h2>
+      <h2 style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+        <span>🗓️ Mis próximas citas (reservadas)</span>
+        <span style="font-size:12px; color:#6b7280;">(máx. 6)</span>
+      </h2>
       <div id="listaProximas"><p style="color:#6b7280;">Cargando...</p></div>
     </div>
 
     <div class="panel-box">
       <h2>⚡ Accesos rápidos</h2>
       <div style="display:flex; gap:10px; flex-wrap:wrap;">
-        <button class="btn-primary" onclick="navigate('calendario')">Ver calendario</button>
-        <button class="btn-primary" onclick="navigate('citas')" style="background:#111827;">Ver mis citas</button>
+        <button class="btn-primary" onclick="navigate('calendario')">📅 Ver calendario</button>
+        <button id="btnInicioTrabajadorCitas" class="btn-primary"
+          onclick="navigate('citas')" style="background:#111827;">
+          📝 Ver mis citas
+        </button>
+      </div>
+      <p style="margin-top:10px; font-size:13px; color:#6b7280;">
+        * El badge “nuevas” se limpia cuando entras a <b>Citas</b>.
+      </p>
+    </div>
+
+    <div class="panel-box">
+      <h2 style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+        <span>🏖️ Vacaciones</span>
+        <span id="vacRestantes" style="font-size:12px;color:#6b7280;">—</span>
+      </h2>
+
+      <div id="vacacionesList" style="margin-top:10px;">
+        <p style="color:#6b7280;">Cargando…</p>
+      </div>
+
+      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;">
+        <button id="btnAbrirVacaciones" class="btn-primary" style="background:#111827;">➕ Añadir vacaciones</button>
+      </div>
+    </div>
+
+    <div id="popupVacaciones" class="popup-overlay" style="display:none;">
+      <div class="popup-card" style="width:340px;">
+        <h2>Vacaciones</h2>
+        <p style="font-size:13px;color:#6b7280;margin-top:-6px;">
+          Selecciona un rango. Se cancelarán automáticamente las citas reservadas esos días.
+        </p>
+
+        <input id="vacDesde" type="date" style="width:100%; margin-top:10px;">
+        <input id="vacHasta" type="date" style="width:100%; margin-top:10px;">
+
+        <div class="popup-buttons">
+          <button id="vacCancelar" class="popup-btn-cancel">Cancelar</button>
+          <button id="vacGuardar" class="popup-btn-confirm">Guardar</button>
+        </div>
       </div>
     </div>
   `;
 
   await cargarDashboardTrabajador();
+  await cargarVacacionesTrabajador(); // ✅ FALTABA: imprescindible
 }
 
 async function cargarDashboardTrabajador() {
@@ -374,9 +441,45 @@ async function cargarDashboardTrabajador() {
   const completadas = (citas || []).filter(c => (c.estado || "") === "completada");
   const canceladas = (citas || []).filter(c => (c.estado || "") === "cancelada");
 
-  document.getElementById("kpiReservadas").textContent = reservadas.length;
+  const lastSeen = getLastSeenTrabajador();
+  const nuevasReservadas = reservadas.filter(c => {
+    const d = parseDbDate(c.created_at || c.updated_at);
+    if (!d) return false;
+    if (!lastSeen) return true;
+    return d > lastSeen;
+  });
+
+  // KPI Reservadas + badge
+  const kpiRes = document.getElementById("kpiReservadas");
+  if (kpiRes) {
+    const badge = nuevasReservadas.length > 0
+      ? ` <span style="margin-left:8px;background:#fee2e2;color:#991b1b;padding:3px 8px;border-radius:999px;font-size:12px;font-weight:800;">
+            +${nuevasReservadas.length}
+          </span>`
+      : "";
+    kpiRes.innerHTML = `${reservadas.length}${badge}`;
+  }
+
   document.getElementById("kpiCompletadas").textContent = completadas.length;
   document.getElementById("kpiCanceladas").textContent = canceladas.length;
+
+  const badgeCard = document.getElementById("badgeNuevasReservadas");
+  if (badgeCard) {
+    badgeCard.innerHTML = nuevasReservadas.length > 0
+      ? `<span style="background:#fef3c7;color:#92400e;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:800;">
+           🔔 ${nuevasReservadas.length} nueva${nuevasReservadas.length > 1 ? "s" : ""}
+         </span>`
+      : `<span style="color:#6b7280; font-size:12px;">Sin nuevas</span>`;
+  }
+
+  const btnCitas = document.getElementById("btnInicioTrabajadorCitas");
+  if (btnCitas) {
+    btnCitas.innerHTML = nuevasReservadas.length > 0
+      ? `📝 Ver mis citas <span style="margin-left:8px;background:#fee2e2;color:#991b1b;padding:3px 8px;border-radius:999px;font-size:12px;font-weight:900;">
+          ${nuevasReservadas.length}
+        </span>`
+      : `📝 Ver mis citas`;
+  }
 
   const now = new Date();
   const proximas = reservadas
@@ -399,11 +502,12 @@ async function cargarDashboardTrabajador() {
   cont.innerHTML = `
     <div style="display:grid; gap:10px;">
       ${proximas.map(c => `
-        <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap;
+        <div style="
+          display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap;
           padding:12px; border:1px solid #e5e7eb; border-radius:12px; background:#fff;">
           <div>
-            <div style="font-weight:700;">${c.fecha} · ${c.hora}</div>
-            <div style="color:#6b7280; font-size:13px;">
+            <div style="font-weight:800;">${c.fecha} · ${c.hora}</div>
+            <div style="color:#6b7280; font-size:13px; margin-top:4px;">
               Cliente: <b>${c.cliente || "—"}</b> · Tel: ${c.telefono || "—"}
             </div>
             ${c.nota ? `<div style="margin-top:6px; color:#374151; font-size:13px;">📝 ${c.nota}</div>` : ""}
@@ -429,4 +533,117 @@ async function cargarDashboardTrabajador() {
       await cargarDashboardTrabajador();
     };
   });
+}
+
+/* =========================
+   VACACIONES TRABAJADOR (30 días máx)
+========================= */
+async function cargarVacacionesTrabajador() {
+  const trabajadorId = state.userId;
+  if (!trabajadorId) return;
+
+  const list = document.getElementById("vacacionesList");
+  const rest = document.getElementById("vacRestantes");
+
+  // ✅ seguridad: si no existe, que no reviente
+  let vacs = [];
+  try {
+    vacs = await api.getVacaciones({ trabajador_id: trabajadorId });
+  } catch (e) {
+    console.error("getVacaciones falló:", e);
+    if (list) {
+      list.innerHTML = `
+        <div style="padding:12px;border:1px dashed #e5e7eb;border-radius:12px;color:#6b7280;">
+          No se pudieron cargar las vacaciones (falta API).
+        </div>
+      `;
+    }
+    return;
+  }
+
+  const usados = (vacs || []).length;
+  const restantes = Math.max(0, 30 - usados);
+
+  if (rest) rest.textContent = `Te quedan ${restantes} / 30 días`;
+
+  if (!list) return;
+
+  if (!vacs || vacs.length === 0) {
+    list.innerHTML = `
+      <div style="padding:12px;border:1px dashed #e5e7eb;border-radius:12px;color:#6b7280;">
+        No tienes vacaciones registradas.
+      </div>
+    `;
+  } else {
+    list.innerHTML = `
+      <div style="display:flex;flex-wrap:wrap;gap:8px;">
+        ${(vacs || []).map(v => `
+          <div style="display:flex;align-items:center;gap:8px;
+                      padding:8px 10px;border:1px solid #e5e7eb;border-radius:999px;background:#fff;">
+            <span style="font-size:13px;font-weight:700;">${v.fecha}</span>
+            <button data-id="${v.id}" title="Eliminar día"
+              style="border:none;background:transparent;cursor:pointer;font-size:14px;">✖</button>
+          </div>
+        `).join("")}
+      </div>
+    `;
+
+    list.querySelectorAll("button[data-id]").forEach(btn => {
+      btn.onclick = async () => {
+        const id = btn.getAttribute("data-id");
+        if (!confirm("¿Eliminar este día de vacaciones?")) return;
+
+        await api.deleteVacacion({ id });
+        await cargarVacacionesTrabajador();
+      };
+    });
+  }
+
+  // bind popup (solo una vez por render)
+  const btnAbrir = document.getElementById("btnAbrirVacaciones");
+  const popup = document.getElementById("popupVacaciones");
+  const vacCancelar = document.getElementById("vacCancelar");
+  const vacGuardar = document.getElementById("vacGuardar");
+
+  if (btnAbrir) {
+    btnAbrir.onclick = () => {
+      // si no le quedan días, no abrir
+      if (restantes <= 0) return alert("⚠️ Ya has consumido los 30 días de vacaciones.");
+      popup.style.display = "flex";
+    };
+  }
+
+  if (vacCancelar) vacCancelar.onclick = () => { popup.style.display = "none"; };
+
+  if (vacGuardar) {
+    vacGuardar.onclick = async () => {
+      const desde = document.getElementById("vacDesde").value;
+      const hasta = document.getElementById("vacHasta").value;
+
+      if (!desde || !hasta) return alert("Selecciona desde y hasta.");
+
+      // validación básica rango
+      if (hasta < desde) return alert("⚠️ La fecha 'hasta' no puede ser menor que 'desde'.");
+
+      const res = await api.addVacacionesRango({
+        trabajador_id: trabajadorId,
+        fechaInicio: desde,
+        fechaFin: hasta
+      });
+
+      if (!res?.success) {
+        alert(res?.message || "No se pudo guardar.");
+        return;
+      }
+
+      popup.style.display = "none";
+
+      // res.added = días añadidos, res.cancelled = citas canceladas (si lo implementas así en backend)
+      const msg = `✅ Vacaciones guardadas (${res.added ?? "?"} días).` +
+        (res.cancelled != null ? ` Citas canceladas: ${res.cancelled}.` : "");
+
+      alert(msg);
+      await cargarVacacionesTrabajador();
+    };
+  }
 }

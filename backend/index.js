@@ -6,3 +6,5 @@ require("./empresas.ipc")(ipcMain);
 require("./trabajadores.ipc")(ipcMain);
 require("./clientes.ipc")(ipcMain);
 require("./perfil.ipc")(ipcMain);
+require("./handlers/vacaciones")(ipcMain);
+

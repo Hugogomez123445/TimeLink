@@ -279,3 +279,4 @@ function limpiarPopupTrabajador() {
     const sel = document.getElementById("trEmpresaSelect");
     if (sel) sel.value = "";
 }
+

@@ -115,7 +115,23 @@ db.serialize(() => {
     ON citas(empresa_id, trabajador_id, fecha, hora)
   `);
 
-  console.log("Tablas y índices listos (admins / trabajadores / clientes / empresas / citas)");
 });
+
+  // =========================
+  // VACACIONES (por trabajador y fecha)
+  // =========================
+  db.run(`
+    CREATE TABLE IF NOT EXISTS vacaciones (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      trabajador_id INTEGER NOT NULL,
+      fecha TEXT NOT NULL, -- YYYY-MM-DD
+      created_at TEXT DEFAULT (datetime('now')),
+      UNIQUE(trabajador_id, fecha),
+      FOREIGN KEY (trabajador_id) REFERENCES trabajadores(id) ON DELETE CASCADE
+    )
+  `);
+
+  db.run(`CREATE INDEX IF NOT EXISTS idx_vacaciones_trabajador_fecha ON vacaciones(trabajador_id, fecha)`);
+
 
 module.exports = db;

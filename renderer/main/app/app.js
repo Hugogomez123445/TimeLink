@@ -4,6 +4,11 @@ import { state } from "./state.js";
 import { navigate } from "./navigation/navigation.js";
 import { logout } from "./navigation/logout.js";
 import { cargarInicioAdmin, cargarInicioBasico, cargarInicioCliente } from "./pages/home.js";
+import { startWorkerNewCitaNotifier } from "./helpers/notifyTrabajador.js"; 
+
+// ... dentro del init()
+startWorkerNewCitaNotifier();
+
 
 window.navigate = navigate;
 window.logout = logout;
@@ -12,6 +17,8 @@ async function init() {
   initHeaderAndPermissions();
   loadSidebarAvatar();
   initAdminSubmenuToggle();
+  startWorkerNewCitaNotifier();
+
 
   await navigate("inicio");
 }

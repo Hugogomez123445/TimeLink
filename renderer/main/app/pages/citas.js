@@ -6,6 +6,7 @@ export async function renderCitas(main) {
   const userId = String(state.userId || "");
   const username = (state.username || "").trim().toLowerCase();
 
+  
   const esAdmin = role === "admin";
   const esTrabajador = role === "trabajador" || role === "trabajadores";
   const esCliente = role === "cliente";
@@ -26,6 +27,11 @@ export async function renderCitas(main) {
     empresas = await api.getEmpresas();
     trabajadores = await api.getTrabajadores();
   }
+  if (esTrabajador) {
+  // Cuando el trabajador abre el apartado se marca como visto.
+  localStorage.setItem(`timelink_trabajador_seen_${state.userId}`, new Date().toISOString());
+}
+
 
   // ============================
   // FILTRO EXTRA CLIENTE:

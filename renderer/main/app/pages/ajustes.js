@@ -72,6 +72,46 @@ export async function renderAjustes(main) {
     cont.textContent = inicial;
   }
 
+  // ✅ NUEVO: refresca avatar en toda la app al instante
+  function refreshAvatarsEverywhere(imagen) {
+    // actualiza state (por si alguna pantalla usa state.imagen)
+    state.imagen = imagen || "";
+
+    // refresca sidebar (tu helper)
+    loadSidebarAvatar?.();
+
+    // cache-bust: si en algún sitio usas URL normal (no base64), añade ?t=
+    const withBust = (src) => {
+      if (!src) return "";
+      if (String(src).startsWith("data:")) return src;
+      const sep = String(src).includes("?") ? "&" : "?";
+      return `${src}${sep}t=${Date.now()}`;
+    };
+
+    // intenta refrescar elementos típicos si existen
+    const ids = ["sidebarAvatarImg", "topAvatarImg", "userAvatar", "avatarImg"];
+    ids.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (el.tagName === "IMG") {
+        if (imagen) el.src = withBust(imagen);
+        else el.removeAttribute("src");
+      }
+    });
+
+    // refresco genérico (si marcas tus avatares con data-avatar="1")
+    document.querySelectorAll("img[data-avatar='1']").forEach(img => {
+      if (imagen) img.src = withBust(imagen);
+      else img.removeAttribute("src");
+    });
+
+    // refresco UI del header si lo pintas con texto
+    const nameEl = document.getElementById("userName");
+    if (nameEl) nameEl.textContent = localStorage.getItem("username") || "";
+    const emailEl = document.getElementById("userEmail");
+    if (emailEl) emailEl.textContent = localStorage.getItem("email") || "";
+  }
+
   const userId = state.userId;
   const role = state.role;
 
@@ -248,11 +288,14 @@ export async function renderAjustes(main) {
       localStorage.setItem("email", newEmail);
       localStorage.setItem("imagen", newImagen);
 
+      // ✅ refresco instantáneo en ajustes + sidebar/header
       pintarAvatar(newImagen, newUser);
-      loadSidebarAvatar();
+      refreshAvatarsEverywhere(newImagen);
 
-      document.getElementById("userName").textContent = newUser;
-      document.getElementById("userEmail").textContent = newEmail;
+      const uName = document.getElementById("userName");
+      const uEmail = document.getElementById("userEmail");
+      if (uName) uName.textContent = newUser;
+      if (uEmail) uEmail.textContent = newEmail;
 
       perfilMsg.textContent = "Perfil guardado correctamente.";
       perfilMsg.style.color = "#15803d";
@@ -279,7 +322,9 @@ export async function renderAjustes(main) {
 
       localStorage.removeItem("imagen");
       pintarAvatar("", localStorage.getItem("username") || "");
-      loadSidebarAvatar();
+
+      // ✅ refresco instantáneo en ajustes + sidebar/header
+      refreshAvatarsEverywhere("");
 
       perfilMsg.textContent = "Foto eliminada.";
       perfilMsg.style.color = "#15803d";

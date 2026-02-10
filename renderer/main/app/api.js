@@ -25,4 +25,9 @@ export const api = {
   updatePassword: (p) => window.api.updatePassword(p),
 
   getCitasTrabajador: (p) => window.api.getCitasTrabajador(p),
+
+  getVacaciones: (p) => window.api.getVacaciones(p),
+addVacacionesRango: (p) => window.api.addVacacionesRango(p),
+deleteVacacion: (p) => window.api.deleteVacacion(p),
+
 };

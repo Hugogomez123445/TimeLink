@@ -47,4 +47,8 @@ contextBridge.exposeInMainWorld("api", {
   getTrabajadoresPendientes: () => ipcRenderer.invoke("get-trabajadores-pendientes"),
 
 
+  getVacaciones: (p) => ipcRenderer.invoke("get-vacaciones", p),
+addVacacionesRango: (p) => ipcRenderer.invoke("add-vacaciones-rango", p),
+deleteVacacion: (p) => ipcRenderer.invoke("delete-vacacion", p),
+
 });
