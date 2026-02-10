@@ -1,7 +1,7 @@
 const { app, BrowserWindow } = require("electron");
 const path = require("path");
 
-// ✅ carga todos los handlers IPC
+//CARGAN HANDLERS
 require("./backend");
 
 function createWindow() {

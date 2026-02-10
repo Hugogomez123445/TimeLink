@@ -7,7 +7,7 @@ import { api } from "../api.js";
 export function cargarInicioBasico() {
   const main = document.getElementById("mainContent");
   main.innerHTML = `
-    <h1>Bienvenido 👋</h1>
+    <h1>Bienvenido</h1>
     <p>Selecciona una opción del menú para comenzar.</p>
   `;
 }
@@ -19,7 +19,7 @@ export function cargarInicioAdmin() {
   const main = document.getElementById("mainContent");
 
   main.innerHTML = `
-    <h1>Panel de Administración 👑</h1>
+    <h1>PANEL DE ADMINISTRACION</h1>
 
     <div class="dashboard-grid">
       <div class="dash-card">
@@ -198,7 +198,7 @@ export async function cargarInicioCliente() {
   const main = document.getElementById("mainContent");
 
   main.innerHTML = `
-    <h1>Hola, ${state.username} 👋</h1>
+    <h1>Hola, ${state.username} </h1>
     <p style="margin-top:-6px; color:#6b7280;">Aquí tienes un resumen de tus citas.</p>
 
     <div style="display:grid; gap:14px; margin-top:18px;">
@@ -300,10 +300,10 @@ export async function cargarInicioCliente() {
         <div>
           <div style="font-weight:800; font-size:14px;">${c.fecha} · ${c.hora}</div>
           <div style="font-size:13px; color:#374151; margin-top:4px;">
-            🏢 ${nombreEmpresa(empresaId)} · 👷 ${nombreTrabajador(trabajadorId)}
+            Empresa ${nombreEmpresa(empresaId)} · Trabajador ${nombreTrabajador(trabajadorId)}
           </div>
           <div style="font-size:12px; color:#6b7280; margin-top:4px;">
-            📞 ${c.telefono || "—"} ${c.nota ? ` · 📝 ${c.nota}` : ""}
+            Telf ${c.telefono || "—"} ${c.nota ? ` · Nota ${c.nota}` : ""}
           </div>
         </div>
         <div style="display:flex; align-items:center;">
@@ -323,7 +323,7 @@ export async function cargarInicioTrabajador() {
   const main = document.getElementById("mainContent");
 
   main.innerHTML = `
-    <h1>Panel de Trabajador 👷‍♂️</h1>
+    <h1>PANEL DE TRABAJADOR</h1>
 
     <div class="dashboard-grid">
       <div class="dash-card">
@@ -355,8 +355,8 @@ export async function cargarInicioTrabajador() {
     <div class="panel-box">
       <h2>⚡ Accesos rápidos</h2>
       <div style="display:flex; gap:10px; flex-wrap:wrap;">
-        <button class="btn-primary" onclick="navigate('calendario')">📅 Ver calendario</button>
-        <button class="btn-primary" onclick="navigate('citas')" style="background:#111827;">📝 Ver mis citas</button>
+        <button class="btn-primary" onclick="navigate('calendario')">Ver calendario</button>
+        <button class="btn-primary" onclick="navigate('citas')" style="background:#111827;">Ver mis citas</button>
       </div>
     </div>
   `;

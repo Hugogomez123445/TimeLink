@@ -1,7 +1,7 @@
 const db = require("../db/database");
 
 module.exports = (ipcMain) => {
-  // ---- LOGIN ADMIN ----
+  //  LOGIN ADMIN 
   ipcMain.handle("login-admin", (event, { username, password }) => {
     return new Promise((resolve, reject) => {
       db.get(
@@ -16,7 +16,7 @@ module.exports = (ipcMain) => {
     });
   });
 
-// ---- LOGIN TRABAJADOR ----
+// LOGIN TRABAJADOR 
 ipcMain.handle("login-trabajador", (event, { username, password }) => {
   return new Promise((resolve, reject) => {
     db.get(
@@ -39,7 +39,7 @@ ipcMain.handle("login-trabajador", (event, { username, password }) => {
 
 
 
-  // ---- LOGIN CLIENTE ----
+  // LOGIN CLIENTE
   ipcMain.handle("login-cliente", (event, { username, password }) => {
     return new Promise((resolve, reject) => {
       db.get(
@@ -54,7 +54,7 @@ ipcMain.handle("login-trabajador", (event, { username, password }) => {
     });
   });
 
-  // ---- REGISTRO CLIENTE ----
+  //  REGISTRO CLIENTE
   ipcMain.handle("register-cliente", (event, { username, email, password, nombre }) => {
     return new Promise((resolve, reject) => {
       const nombreFinal = (nombre && nombre.trim()) ? nombre.trim() : username;

@@ -4,8 +4,8 @@ const path = require("path");
 
 const dbPath = path.join(__dirname, "data.db");
 const db = new sqlite3.Database(dbPath, (err) => {
-  if (err) console.error("❌ Error abriendo BD:", err);
-  else console.log("✅ BD abierta:", dbPath);
+  if (err) console.error("Error abriendo BD:", err);
+  else console.log("BD abierta:", dbPath);
 });
 
 db.serialize(() => {
@@ -115,7 +115,7 @@ db.serialize(() => {
     ON citas(empresa_id, trabajador_id, fecha, hora)
   `);
 
-  console.log("✔ Tablas y índices listos (admins / trabajadores / clientes / empresas / citas)");
+  console.log("Tablas y índices listos (admins / trabajadores / clientes / empresas / citas)");
 });
 
 module.exports = db;

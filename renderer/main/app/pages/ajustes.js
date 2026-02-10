@@ -86,7 +86,7 @@ export async function renderAjustes(main) {
   const prefFormatoHora = localStorage.getItem("pref_formato_hora") || "24";
 
   main.innerHTML = `
-    <h1 class="title-page">Ajustes ⚙️</h1>
+    <h1 class="title-page">AJUSTES</h1>
 
     <div style="display:grid; gap:16px; max-width:900px;">
 
@@ -219,7 +219,7 @@ export async function renderAjustes(main) {
 
   document.getElementById("btnGuardarPerfil").onclick = async () => {
     try {
-      if (!userId) return alert("❌ No hay sesión iniciada.");
+      if (!userId) return alert(" No hay sesión iniciada.");
 
       const newUser = document.getElementById("aj_username").value.trim();
       const newEmail = document.getElementById("aj_email").value.trim();
@@ -239,7 +239,7 @@ export async function renderAjustes(main) {
       });
 
       if (!res?.success) {
-        perfilMsg.textContent = "❌ " + (res?.message || "No se pudo guardar.");
+        perfilMsg.textContent = "" + (res?.message || "No se pudo guardar.");
         perfilMsg.style.color = "#b91c1c";
         return;
       }
@@ -254,18 +254,18 @@ export async function renderAjustes(main) {
       document.getElementById("userName").textContent = newUser;
       document.getElementById("userEmail").textContent = newEmail;
 
-      perfilMsg.textContent = "✅ Perfil guardado correctamente.";
+      perfilMsg.textContent = "Perfil guardado correctamente.";
       perfilMsg.style.color = "#15803d";
     } catch (e) {
       console.error(e);
-      perfilMsg.textContent = "❌ Error guardando perfil. Mira consola (F12).";
+      perfilMsg.textContent = "Error guardando perfil. Mira consola (F12).";
       perfilMsg.style.color = "#b91c1c";
     }
   };
 
   document.getElementById("btnQuitarFoto").onclick = async () => {
     try {
-      if (!userId) return alert("❌ No hay sesión iniciada.");
+      if (!userId) return alert("No hay sesión iniciada.");
 
       const res = await api.updateProfile({
         role,
@@ -275,17 +275,17 @@ export async function renderAjustes(main) {
         imagen: ""
       });
 
-      if (!res?.success) return alert("❌ No se pudo quitar la foto.");
+      if (!res?.success) return alert("No se pudo quitar la foto.");
 
       localStorage.removeItem("imagen");
       pintarAvatar("", localStorage.getItem("username") || "");
       loadSidebarAvatar();
 
-      perfilMsg.textContent = "✅ Foto eliminada.";
+      perfilMsg.textContent = "Foto eliminada.";
       perfilMsg.style.color = "#15803d";
     } catch (e) {
       console.error(e);
-      alert("❌ Error quitando foto.");
+      alert("Error quitando foto.");
     }
   };
 
@@ -301,7 +301,7 @@ export async function renderAjustes(main) {
 
   document.getElementById("btnCambiarPass").onclick = async () => {
     try {
-      if (!userId) return alert("❌ No hay sesión iniciada.");
+      if (!userId) return alert("No hay sesión iniciada.");
 
       const oldPass = document.getElementById("aj_oldPass").value.trim();
       const p1 = document.getElementById("aj_newPass1").value.trim();
@@ -336,7 +336,7 @@ export async function renderAjustes(main) {
       });
 
       if (!res?.success) {
-        passMsg.textContent = "❌ " + (res?.message || "No se pudo cambiar.");
+        passMsg.textContent = "" + (res?.message || "No se pudo cambiar.");
         passMsg.style.color = "#b91c1c";
         return;
       }
@@ -345,11 +345,11 @@ export async function renderAjustes(main) {
       document.getElementById("aj_newPass1").value = "";
       document.getElementById("aj_newPass2").value = "";
 
-      passMsg.textContent = "✅ Contraseña actualizada correctamente.";
+      passMsg.textContent = "Contraseña actualizada correctamente.";
       passMsg.style.color = "#15803d";
     } catch (e) {
       console.error(e);
-      passMsg.textContent = "❌ Error cambiando contraseña. Mira consola (F12).";
+      passMsg.textContent = "Error cambiando contraseña. Mira consola (F12).";
       passMsg.style.color = "#b91c1c";
     }
   };
@@ -357,25 +357,25 @@ export async function renderAjustes(main) {
   document.getElementById("btnGuardarPrefs").onclick = () => {
     localStorage.setItem("pref_notifs", document.getElementById("aj_notifs").value);
     localStorage.setItem("pref_formato_hora", document.getElementById("aj_formatoHora").value);
-    alert("✅ Preferencias guardadas.");
+    alert("Preferencias guardadas.");
   };
 
   document.getElementById("btnResetPrefs").onclick = () => {
     ["pref_notifs", "pref_formato_hora"].forEach(k => localStorage.removeItem(k));
-    alert("✅ Preferencias restablecidas.");
+    alert("Preferencias restablecidas.");
     renderAjustes(main);
   };
 
   document.getElementById("btnLimpiarSeleccion").onclick = () => {
     localStorage.removeItem("seleccion_empresa");
     localStorage.removeItem("seleccion_trabajador");
-    alert("✅ Selección eliminada.");
+    alert("Selección eliminada.");
     renderAjustes(main);
   };
 
   document.getElementById("btnBorrarLocal").onclick = () => {
     ["pref_tema", "pref_notifs", "pref_formato_hora"].forEach(k => localStorage.removeItem(k));
-    alert("✅ Preferencias locales borradas.");
+    alert("Preferencias locales borradas.");
     renderAjustes(main);
   };
 

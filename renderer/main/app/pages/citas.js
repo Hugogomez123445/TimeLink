@@ -29,9 +29,6 @@ export async function renderCitas(main) {
 
   // ============================
   // FILTRO EXTRA CLIENTE:
-  // Solo sus citas + solo reservadas
-  // IMPORTANTE: tus citas muchas veces NO llevan cliente_id,
-  // así que usamos fallback por nombre (campo c.cliente)
   // ============================
   if (esCliente) {
     citas = (citas || []).filter(c => {
@@ -50,7 +47,7 @@ export async function renderCitas(main) {
   // UI
   // ============================
   main.innerHTML = `
-    <h1>Citas 📝</h1>
+    <h1>CITAS</h1>
 
     ${esTrabajador ? `
       <div style="display:flex; align-items:center; gap:10px; margin: 10px 0 0;">

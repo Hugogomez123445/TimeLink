@@ -2,7 +2,7 @@ const db = require("../db/database");
 
 module.exports = (ipcMain) => {
 
-  // --- CITAS SEGURAS TRABAJADOR ---
+  //CITAS SEGURAS TRABAJADOR 
   ipcMain.handle("get-citas-trabajador", async (event, { trabajador_id }) => {
     return new Promise((resolve, reject) => {
       if (!trabajador_id) return resolve([]);
@@ -38,7 +38,7 @@ module.exports = (ipcMain) => {
     });
   });
 
-  // --- TODAS LAS CITAS (admin) ---
+  // TODAS LAS CITAS (admin)
   ipcMain.handle("get-citas", async () => {
     return new Promise((resolve, reject) => {
       const sql = `
@@ -59,7 +59,7 @@ module.exports = (ipcMain) => {
     });
   });
 
-  // --- AÑADIR CITA ---
+  // AÑADIR CITA 
   ipcMain.handle("add-cita", async (event, payload) => {
     const { fecha, hora, cliente, telefono = "", nota = "", empresa_id, trabajador_id } = payload;
 
@@ -101,7 +101,7 @@ module.exports = (ipcMain) => {
     });
   });
 
-  // --- BORRAR CITA ---
+  // BORRAR CITA 
   ipcMain.handle("delete-cita", async (event, citaId) => {
     return new Promise((resolve, reject) => {
       db.run(`DELETE FROM citas WHERE id = ?`, [citaId], function (err) {
@@ -111,7 +111,7 @@ module.exports = (ipcMain) => {
     });
   });
 
-  // --- REUSAR CANCELADA ---
+  // REUSAR CANCELADA 
   ipcMain.handle("find-cita-cancelada", async (event, { empresa_id, trabajador_id, fecha, hora }) => {
     return new Promise((resolve, reject) => {
       const q = `
@@ -128,7 +128,7 @@ module.exports = (ipcMain) => {
     });
   });
 
-  // --- CAMBIAR ESTADO ---
+  // CAMBIAR ESTADO 
   ipcMain.handle("set-cita-estado", async (event, { id, estado }) => {
     return new Promise((resolve, reject) => {
       const q = `UPDATE citas SET estado = ?, updated_at = datetime('now') WHERE id = ?`;

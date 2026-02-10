@@ -7,10 +7,6 @@ contextBridge.exposeInMainWorld("api", {
   loginCliente: (data) => ipcRenderer.invoke("login-cliente", data),
   registerCliente: (data) => ipcRenderer.invoke("register-cliente", data),
 
-  // (Opcional) compatibilidad antigua (si aún hay partes que lo usan)
-  // loginUser: (data) => ipcRenderer.invoke("login-user", data),
-  // registerUser: (data) => ipcRenderer.invoke("register-user", data),
-
   // CITAS
   getCitas: () => ipcRenderer.invoke("get-citas"),
   addCita: (data) => ipcRenderer.invoke("add-cita", data),
@@ -41,13 +37,13 @@ contextBridge.exposeInMainWorld("api", {
 
   getCitasTrabajador: (data) => ipcRenderer.invoke("get-citas-trabajador", data),
 
-  // REGISTRO trabajador (pendiente)
+  // REGISTRO trabajador se queda en PENDIENTE
   registerTrabajador: (data) => ipcRenderer.invoke("register-trabajador", data),
 
-  // aprobar trabajador (admin)
+  // aprobar trabajador
   aprobarTrabajador: (id) => ipcRenderer.invoke("aprobar-trabajador", id),
 
-  // (opcional) listado solo pendientes (si quieres)
+  // listado solo pendientes
   getTrabajadoresPendientes: () => ipcRenderer.invoke("get-trabajadores-pendientes"),
 
 

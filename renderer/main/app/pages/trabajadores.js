@@ -20,11 +20,11 @@ export async function renderTrabajadores(main) {
 
 
     main.innerHTML = `
-    <h1 class="title-page">Trabajadores 👷‍♂️</h1>
+    <h1 class="title-page">TRABAJADORES</h1>
 
     <div class="trabajador-toolbar" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
       <button class="btn-primary add-empresa-btn" id="btnNuevoTrabajador">
-        ➕ Añadir trabajador
+        Añadir trabajador
       </button>
 
       <input 
@@ -86,7 +86,7 @@ function pintarTrabajadores(lista, gridId, isPendiente) {
         const badge = isPendiente
             ? `<div style="margin-top:6px;">
       <span style="background:#fef3c7;color:#92400e;padding:4px 10px;border-radius:999px;font-size:12px;">
-        ⏳ Pendiente
+        Pendiente
       </span>
     </div>`
             : "";

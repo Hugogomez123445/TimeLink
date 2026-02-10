@@ -37,10 +37,6 @@ export function loadSidebarAvatar() {
   else cont.textContent = inicial;
 }
 
-/**
- * Ruta robusta a assets (están en la raíz del proyecto).
- * Desde renderer/main/app/... => ../../../assets/...
- */
 export function assetUrl(fileName) {
   return new URL(`../../../assets/${fileName}`, import.meta.url).href;
 }

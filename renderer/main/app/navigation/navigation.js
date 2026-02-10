@@ -75,11 +75,10 @@ export async function navigate(section) {
         break;
     }
   } catch (err) {
-    console.error("❌ Error en navigate():", err);
+    console.error("Error en navigate:", err);
     if (main) {
       main.innerHTML = `
-        <h1>Ups…</h1>
-        <p>Ha ocurrido un error cargando esta sección.</p>
+        <p>Ha ocurrido un error</p>
       `;
     }
   }

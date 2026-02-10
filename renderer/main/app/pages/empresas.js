@@ -6,18 +6,18 @@ let listenersBound = false;
 
 export async function renderEmpresas(main) {
   if (state.role !== "admin") {
-    main.innerHTML = "<h1>Acceso denegado 🔒</h1>";
+    main.innerHTML = "<h1>Acceso denegado</h1>";
     return;
   }
 
   globals.empresasGlobal = await api.getEmpresas();
 
   main.innerHTML = `
-    <h1 class="title-page">Empresas 🏢</h1>
+    <h1 class="title-page">EMPRESAS</h1>
 
     <div class="empresa-toolbar">
       <button class="btn-primary add-empresa-btn" id="btnNuevaEmpresa">
-        ➕ Añadir empresa
+        Añadir empresa
       </button>
 
       <input id="buscarEmpresa"
@@ -178,7 +178,7 @@ function bindEmpresaPopupListeners() {
 
       } catch (err) {
         console.error(err);
-        alert("❌ Error guardando la empresa. Mira consola (F12).");
+        alert("Error guardando la empresa. Mira consola (F12).");
       }
     };
   }
@@ -229,7 +229,7 @@ function bindEmpresaPopupListeners() {
 
       } catch (err) {
         console.error(err);
-        alert("❌ Error eliminando la empresa. Mira consola (F12).");
+        alert("Error eliminando la empresa. Mira consola (F12).");
       }
     };
   }

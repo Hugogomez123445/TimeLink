@@ -11,7 +11,7 @@ export async function renderClientes(main) {
   }
 
   // ============================
-  // ADMIN -> lista desde tabla clientes (lo que ya tenías)
+  // ADMIN 
   // ============================
   if (role === "admin") {
     const clientes = await api.getClientes();
@@ -19,7 +19,7 @@ export async function renderClientes(main) {
     const empresas = await api.getEmpresas();
 
     main.innerHTML = `
-      <h1>Clientes 👤</h1>
+      <h1>CLIENTES</h1>
 
       <div class="clientes-layout">
         <div class="clientes-card">
@@ -125,7 +125,7 @@ export async function renderClientes(main) {
 
     if (!empresaId) {
       main.innerHTML = `
-        <h1>Clientes 👤</h1>
+        <h1>CLIENTES</h1>
         <p style="margin-top:10px;color:#b91c1c;">
           ⚠️ Tu usuario trabajador no tiene empresa asignada. Pide al admin que te asigne una.
         </p>
@@ -153,7 +153,7 @@ export async function renderClientes(main) {
     ).sort((a, b) => a.localeCompare(b));
 
     main.innerHTML = `
-      <h1>Clientes 👤</h1>
+      <h1>CLIENTES</h1>
 
       <div class="clientes-layout">
         <div class="clientes-card">
@@ -256,5 +256,5 @@ export async function renderClientes(main) {
   }
 
   // fallback
-  main.innerHTML = "<h1>Acceso denegado 🔒</h1>";
+  main.innerHTML = "<h1>Acceso denegado</h1>";
 }

@@ -17,16 +17,16 @@ const passwordError = document.getElementById("passwordError");
 const strengthContainer = document.getElementById("passwordStrength");
 const strengthBar = document.getElementById("strengthBar");
 
-// ✅ Caja de portales (admin/trabajador/registro trabajador)
+// Caja de portales 
 const accessButtons = document.getElementById("accessButtons");
 
-// --- Popup trabajador refs ---
+// Popup trabajador referencias
 const workerPopupTitle = document.getElementById("workerPopupTitle");
 const workerEmail = document.getElementById("workerEmail");
 const toggleWorkerMode = document.getElementById("toggleWorkerMode");
 const loginWorkerBtn = document.getElementById("loginWorkerBtn");
 
-// Helper loader
+// Helper LOAD
 function setLoading(loading) {
   if (loading) {
     actionBtn.disabled = true;
@@ -39,7 +39,7 @@ function setLoading(loading) {
   }
 }
 
-// Guardar sesión (común)
+// Guardar las sesiones
 function saveSession(user, role) {
   localStorage.setItem("userId", user.id);
   localStorage.setItem("username", user.username || user.nombre || "");
@@ -49,13 +49,13 @@ function saveSession(user, role) {
   if (user.empresa_id != null) localStorage.setItem("empresa_id", user.empresa_id);
 }
 
-// ✅ Helper: mostrar/ocultar portales según estado
+// mostrar/ocultar portales según estado
 function syncPortalesUI() {
   if (!accessButtons) return;
   accessButtons.style.display = isLogin ? "flex" : "none";
 }
 
-// Cambiar entre login y registro (CLIENTE)
+// Cambiar entre login y registro en el inicio de cliente
 toggleText.addEventListener("click", () => {
   if (isAdminMode) return;
 
@@ -82,14 +82,13 @@ toggleText.addEventListener("click", () => {
       strengthContainer.style.display = "block";
     }
 
-    // ✅ Portales: login sí, registro no
     syncPortalesUI();
 
     container.style.opacity = "1";
   }, 150);
 });
 
-// Acción principal: LOGIN/REGISTER CLIENTE
+// LOGIN/REGISTER CLIENTE
 actionBtn.addEventListener("click", async () => {
   const username = document.getElementById("username").value.trim();
   const password = passwordInput.value.trim();
@@ -162,7 +161,7 @@ actionBtn.addEventListener("click", async () => {
       if (result.success) {
         alert("Usuario registrado correctamente.");
 
-        // volver a login automáticamente
+        //volvemos a login automáticamente
         isLogin = true;
 
         title.textContent = "Iniciar Sesión";
@@ -172,7 +171,7 @@ actionBtn.addEventListener("click", async () => {
         strengthContainer.style.display = "none";
         passwordError.style.display = "none";
 
-        // ✅ portales vuelven a mostrarse
+        // portales vuelven a mostrarse
         syncPortalesUI();
       } else {
         alert(result.message || "No se pudo registrar.");
@@ -186,7 +185,7 @@ actionBtn.addEventListener("click", async () => {
   }
 });
 
-// Fuerza de contraseña (solo en registro cliente)
+// Requisito de contraseña en cliente
 passwordInput.addEventListener("input", () => {
   if (isLogin || isAdminMode) {
     passwordError.style.display = "none";
@@ -216,7 +215,7 @@ passwordInput.addEventListener("input", () => {
   }
 });
 
-// --- POPUP ADMIN ---
+// POPUP ADMIN
 document.getElementById("adminAccess").addEventListener("click", () => {
   document.getElementById("popupWorker").style.display = "none";
   document.getElementById("popupAdmin").style.display = "flex";
@@ -242,7 +241,7 @@ document.getElementById("loginAdminBtn").addEventListener("click", async () => {
   window.location.href = "./main/mainApp.html";
 });
 
-// --- POPUP TRABAJADOR ---
+//POPUP TRABAJADOR 
 document.getElementById("workerAccess").addEventListener("click", () => {
   document.getElementById("popupAdmin").style.display = "none";
   document.getElementById("popupWorker").style.display = "flex";
@@ -291,7 +290,7 @@ loginWorkerBtn.addEventListener("click", async () => {
 
     if (!res.success) return alert(res.message || "No se pudo registrar.");
 
-    alert("✅ Solicitud enviada. Un administrador debe aprobar tu cuenta.");
+    alert("Solicitud enviada. Un administrador debe aprobar tu cuenta.");
     document.getElementById("popupWorker").style.display = "none";
     return;
   }
@@ -314,5 +313,4 @@ document.getElementById("togglePassword").addEventListener("click", () => {
   togglePassword.textContent = hidden ? "🙈" : "👁️";
 });
 
-// ✅ Inicial: estamos en login => mostrar portales
 syncPortalesUI();

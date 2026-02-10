@@ -47,14 +47,14 @@ function addCitaToCalendar(c) {
 }
 
 /* =========================================================
-   MODO ADMIN/CLIENTE (como lo tienes): seleccionar empresa
+   MODO ADMIN/CLIENTE
    ========================================================= */
 export async function seleccionarEmpresa(main) {
   const empresas = await api.getEmpresas();
   const defaultCompany = assetUrl("default_company.png");
 
   main.innerHTML = `
-    <h1>Selecciona una empresa 🏢</h1>
+    <h1>Seleciona una empresa</h1>
     <div class="empresa-grid">
       ${empresas.map(e => `
         <div class="empresa-card-view" onclick="seleccionarTrabajador(${e.id})">
@@ -78,7 +78,7 @@ export async function seleccionarTrabajador(empresaId) {
   const lista = trabajadores.filter(t => String(t.empresa_id) === String(empresaId));
 
   main.innerHTML = `
-    <h1>Selecciona un trabajador 👷‍♂️</h1>
+    <h1>Selecciona un trabajador</h1>
     <div class="empresa-grid">
       ${lista.map(t => `
         <div class="trabajador-card-view" onclick="abrirCalendarioTrabajador(${t.id}, ${empresaId})">
@@ -115,7 +115,7 @@ export async function renderCalendario(main) {
   }
 
   main.innerHTML = `
-    <h1>Calendario 📅</h1>
+    <h1>CALENDARIO</h1>
     <div id="calendar" style="margin-top:20px;"></div>
 
     <div id="hourPanel" class="hour-panel" style="display:none;">
@@ -361,7 +361,7 @@ export async function renderCalendario(main) {
         if (d) generateHours(d);
 
       } catch (err) {
-        console.error("❌ Error guardando cita:", err);
+        console.error("Error guardando cita:", err);
 
         if (String(err?.message || "").includes("UNIQUE constraint failed")) {
           alert("⚠️ Esa hora ya está reservada.");
@@ -371,18 +371,18 @@ export async function renderCalendario(main) {
           return;
         }
 
-        alert("❌ No se pudo guardar la cita. Mira la consola (F12).");
+        alert("No se pudo guardar la cita. Mira la consola.");
       }
     };
   }, 50);
 }
 
 /* =========================================================
-   MODO TRABAJADOR: abrir directo + SOLO LECTURA
+   MODO TRABAJADOR SOLO LECTURA
    ========================================================= */
 export async function abrirCalendarioTrabajadorActual(main) {
   main.innerHTML = `
-    <h1>Calendario 📅</h1>
+    <h1>CALENDARIO</h1>
     <p style="margin-top:6px;color:#6b7280;">Solo lectura (tus citas reservadas)</p>
     <div id="calendar" style="margin-top:20px;"></div>
   `;
@@ -395,8 +395,8 @@ export async function abrirCalendarioTrabajadorActual(main) {
     locale: "es",
     firstDay: 1,
     height: "auto",
-    selectable: false,      // ✅ NO seleccionar
-    editable: false,        // ✅ NO arrastrar
+    selectable: false,      
+    editable: false,        
     eventStartEditable: false,
     eventDurationEditable: false,
     headerToolbar: {
@@ -405,10 +405,10 @@ export async function abrirCalendarioTrabajadorActual(main) {
       right: "dayGridMonth,timeGridWeek,timeGridDay",
     },
 
-    // ✅ NO dateClick => no reserva
+    // NO dateClick => no reserva
     dateClick: null,
 
-    // ✅ eventClick solo muestra info (sin prompt)
+    // eventClick solo muestra info (sin prompt)
     eventClick: (info) => {
       const c = info.event.extendedProps || {};
       const estado = c.estado || "reservado";
@@ -426,7 +426,7 @@ export async function abrirCalendarioTrabajadorActual(main) {
 
   calendar.render();
 
-  // ✅ cargar solo SUS citas
+  // cargar solo SUS citas
   let citas = [];
   if (api.getCitasTrabajador) {
     citas = await api.getCitasTrabajador({ trabajador_id: trabajadorId });
