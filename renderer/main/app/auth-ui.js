@@ -16,6 +16,7 @@ export function initHeaderAndPermissions() {
   if (state.role === "cliente") {
     if (btnTrabajadores) btnTrabajadores.style.display = "none";
     if (btnEmpresas) btnEmpresas.style.display = "none";
+    if (btnClientes) btnClientes.style.display = "none"
   }
 
   if (state.role === "trabajador") {
