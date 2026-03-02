@@ -5,8 +5,11 @@ TimeLink es mi Proyecto Final , una aplicación desarrollada íntegramente como 
 
 ¿Qué es TimeLink?
 
-TimeLink es una aplicación pensada para [describe aquí brevemente qué hace tu app — por ejemplo: gestionar eventos, tareas, notas o cualquier funcionalidad principal].
-El objetivo principal es demostrar mis competencias en desarrollo web fullstack, resolviendo un problema real y construyendo una solución eficiente y usable.
+TimeLink es una aplicación diseñada para la gestión y organización del tiempo, permitiendo a los usuarios planificar, administrar y visualizar sus tareas o eventos de forma estructurada.
+
+El proyecto conecta una interfaz intuitiva con un backend funcional y una base de datos, ofreciendo una experiencia completa donde el usuario puede crear, modificar y gestionar su información de manera eficiente.
+
+TimeLink nace con el objetivo de optimizar la productividad y demostrar la implementación de una arquitectura fullstack bien organizada y escalable.
 
 
 Tecnologías
